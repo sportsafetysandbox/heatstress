@@ -993,6 +993,7 @@
     getLocation()
       .then(function(loc){
         els["loading-text"].textContent = "Checking nearest WBGT station";
+        loadNearestAEDs(loc.lat, loc.lon); // fires independently — AED card updates whenever it's ready, doesn't block the main reading
         return fetchWBGT().then(function(json){ return {loc:loc, json:json}; });
       })
       .then(function(bundle){
@@ -1065,41 +1066,91 @@
     });
   }
 
-  // PLACEHOLDER — real AED data isn't wired in yet (geocoding the
-  // SCDF AED Locations dataset is in progress). This renders sample
-  // entries in the final visual format so the card layout is
-  // complete and ready; swap this for a real nearest-AED lookup
-  // (same pattern as pickNearest for WBGT stations) once
-  // aed-locations.json is available.
-  function renderAEDPlaceholder(){
+  // Real AED nearest-lookup, using the static aed-locations.json
+  // file (pre-geocoded once via geocode-aed.js — see that script
+  // for why this is a static file rather than a live API call).
+  // Fetched once and cached in memory; reused on every refresh
+  // since AED locations don't change between page loads.
+  var aedDataCache = null;
+
+  function fetchAEDData(){
+    if(aedDataCache) return Promise.resolve(aedDataCache);
+    return fetch("aed-locations.json")
+      .then(function(res){
+        if(!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function(data){
+        aedDataCache = data;
+        return data;
+      });
+  }
+
+  function findNearestAEDs(aedList, lat, lon, count){
+    return aedList
+      .map(function(aed){
+        return {
+          building: aed.building,
+          location: aed.location,
+          distanceKm: haversine(lat, lon, aed.lat, aed.lon)
+        };
+      })
+      .sort(function(a, b){ return a.distanceKm - b.distanceKm; })
+      .slice(0, count);
+  }
+
+  function renderAEDList(nearestAEDs){
     var summary = document.getElementById("aed-summary");
     var list = document.getElementById("aed-list");
-    var placeholderAEDs = [
-      { name: "Yio Chu Kang Stadium", location: "Level 1, Main Entrance Lobby", distance: "210 m" },
-      { name: "Yio Chu Kang Swimming Complex", location: "Level 1, Reception Counter", distance: "430 m" },
-      { name: "Yio Chu Kang Community Club", location: "Level 1, Outside Office", distance: "850 m" }
-    ];
 
-    summary.textContent = "3 found within 850 m (placeholder — real data coming soon)";
+    if(!nearestAEDs.length){
+      summary.textContent = "No AED data available right now.";
+      list.innerHTML = "";
+      return;
+    }
+
+    var farthest = nearestAEDs[nearestAEDs.length - 1].distanceKm;
+    var farthestLabel = farthest < 1
+      ? Math.round(farthest * 1000) + " m"
+      : farthest.toFixed(1) + " km";
+    summary.textContent = nearestAEDs.length + " found within " + farthestLabel;
+
     list.innerHTML = "";
-    placeholderAEDs.forEach(function(aed){
+    nearestAEDs.forEach(function(aed, i){
+      var distLabel = aed.distanceKm < 1
+        ? Math.round(aed.distanceKm * 1000) + " m"
+        : aed.distanceKm.toFixed(1) + " km";
       var li = document.createElement("li");
       li.style.display = "flex";
       li.style.justifyContent = "space-between";
       li.style.gap = "10px";
       li.style.padding = "8px 0";
-      li.style.borderBottom = "1px solid var(--line)";
+      if(i < nearestAEDs.length - 1) li.style.borderBottom = "1px solid var(--line)";
+      var locationHtml = aed.location
+        ? "<br><span style=\"font-size:11px; color:var(--paper-dim);\">" + aed.location + "</span>"
+        : "";
       li.innerHTML =
-        "<span style=\"color:var(--paper);\">" + aed.name +
-        "<br><span style=\"font-size:11px; color:var(--paper-dim);\">" + aed.location + "</span></span>" +
-        "<span style=\"font-family:'Barlow Condensed',sans-serif; font-weight:700; white-space:nowrap;\">" + aed.distance + "</span>";
+        "<span style=\"color:var(--paper);\">" + aed.building + locationHtml + "</span>" +
+        "<span style=\"font-family:'Barlow Condensed',sans-serif; font-weight:700; white-space:nowrap;\">" + distLabel + "</span>";
       list.appendChild(li);
     });
-    list.lastChild.style.borderBottom = "none";
   }
-  renderAEDPlaceholder();
+
+  function loadNearestAEDs(lat, lon){
+    var summary = document.getElementById("aed-summary");
+    summary.textContent = "Finding nearest AEDs…";
+    fetchAEDData()
+      .then(function(aedList){
+        var nearest = findNearestAEDs(aedList, lat, lon, 3);
+        renderAEDList(nearest);
+      })
+      .catch(function(err){
+        summary.textContent = "Couldn't load AED data right now.";
+      });
+  }
 
   els["btn-locate"].addEventListener("click", run);
+
   els["btn-retry"].addEventListener("click", run);
   els["btn-refresh"].addEventListener("click", run);
 
