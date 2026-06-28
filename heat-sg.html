@@ -56,7 +56,7 @@
   /* ---------- TOP BAR ---------- */
   .topbar{
     display:flex;
-    align-items:baseline;
+    align-items:flex-start;
     justify-content:space-between;
     padding:20px 20px 4px;
   }
@@ -68,6 +68,17 @@
     color:var(--paper);
   }
   .brand span{ color:var(--paper-dim); font-weight:600; }
+  .clock-block{
+    text-align:right;
+  }
+  .clock-date{
+    font-size:10px;
+    color:var(--paper-dim);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    opacity:0.7;
+    margin-bottom:2px;
+  }
   .clock{
     font-size:11px;
     color:var(--paper-dim);
@@ -324,6 +335,15 @@
     color:var(--paper-dim);
     padding-bottom:4px;
   }
+  .station-label{
+    display:block;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--paper-dim);
+    opacity:0.7;
+    margin-bottom:3px;
+  }
   .station-meta .col b{
     display:block;
     color:var(--paper);
@@ -448,7 +468,10 @@
 
   <div class="topbar">
     <div class="brand">HEAT<span>/SG</span></div>
-    <div class="clock" id="clock">—</div>
+    <div class="clock-block">
+      <div class="clock-date" id="clock-date">—</div>
+      <div class="clock" id="clock">—</div>
+    </div>
   </div>
 
   <!-- ============ ONBOARDING / PERMISSION STATE ============ -->
@@ -530,6 +553,7 @@
 
     <div class="station-meta">
       <div class="col">
+        <span class="station-label">WBGT Station</span>
         <b id="station-name">—</b>
         <span id="station-distance">—</span>
       </div>
@@ -546,6 +570,20 @@
 
     <div class="footer">
       <button class="btn" id="btn-refresh">Refresh reading</button>
+
+      <div class="org-card" id="aed-card">
+        <button class="org-toggle" id="aed-toggle" aria-expanded="false">
+          <span class="org-toggle-text">
+            <span class="org-toggle-title">Nearest AEDs</span>
+            <span class="org-toggle-sub" id="aed-summary">Coming soon — AED location data is being prepared</span>
+          </span>
+          <span class="org-toggle-icon" id="aed-icon">▾</span>
+        </button>
+        <div class="org-body hidden" id="aed-body">
+          <ol class="org-list" id="aed-list" style="list-style:none; padding-left:0;"></ol>
+          <div class="action-source">Source: SCDF AED Locations, data.gov.sg</div>
+        </div>
+      </div>
 
       <div class="org-card">
         <button class="org-toggle" id="org-toggle" aria-expanded="false">
@@ -614,6 +652,10 @@
   function tickClock(){
     var d = new Date();
     els.clock.textContent = d.toLocaleTimeString('en-SG', {hour:'2-digit', minute:'2-digit'}) + " SGT";
+    var dateEl = document.getElementById("clock-date");
+    if(dateEl){
+      dateEl.textContent = d.toLocaleDateString('en-SG', {weekday:'short', day:'numeric', month:'short'});
+    }
   }
   tickClock();
   setInterval(tickClock, 30000);
@@ -661,8 +703,12 @@
     catch(e){ return ""; }
   }
 
-  function fetchWBGT(){
-    return fetch(WBGT_API)
+  function fetchWBGT(dateParam){
+    var url = WBGT_API;
+    if(dateParam){
+      url += (url.indexOf("?") > -1 ? "&" : "?") + "date=" + encodeURIComponent(dateParam);
+    }
+    return fetch(url)
       .then(function(res){
         if(!res.ok){
           return res.text().then(function(bodyText){
@@ -742,6 +788,33 @@
       if(d < bestDist){ bestDist = d; best = s; }
     });
     return { station: best, distanceKm: bestDist };
+  }
+
+  // Walks a full day's worth of records (from a ?date=YYYY-MM-DD
+  // request) and extracts just one station's readings over time,
+  // for the "last 3 hours" trend timeline. Returns points sorted
+  // oldest-to-newest: [{ time: Date, value: Number, flag: String }]
+  function extractStationHistory(json, stationId){
+    var data = json && json.data ? json.data : json;
+    var records = data.records || [];
+    var points = [];
+
+    records.forEach(function(record){
+      var readings = (record.item && record.item.readings) || [];
+      var match = readings.filter(function(r){
+        return r.station && r.station.id === stationId;
+      })[0];
+      if(!match) return;
+      var value = Number(match.wbgt);
+      if(isNaN(value)) return;
+      var timeStr = record.datetime || record.updatedTimestamp;
+      var time = timeStr ? new Date(timeStr) : null;
+      if(!time || isNaN(time.getTime())) return;
+      points.push({ time: time, value: value, flag: match.heatStress });
+    });
+
+    points.sort(function(a, b){ return a.time - b.time; });
+    return points;
   }
 
   // ---------------------------------------------------------------
@@ -853,22 +926,42 @@
     els.needle.style.left = needlePos + "%";
   }
 
-  function renderTimeline(currentLevel){
-    // We only have the live snapshot from this lightweight client (no
-    // historical pull in v1) — render a simple recent-trend placeholder
-    // using the current level repeated, with "now" highlighted, so the
-    // layout is ready to wire up to historical data later.
+  function renderTimeline(historyPoints, currentLevel){
     els["timeline-track"].innerHTML = "";
-    var heights = { low: 28, mod: 60, high: 100 };
-    for(var i = 0; i < 12; i++){
+
+    if(!historyPoints || !historyPoints.length){
+      // No history available yet (e.g. first reading of the day, or
+      // the history fetch failed) — fall back to showing just the
+      // current single reading rather than fabricating data.
       var bar = document.createElement("div");
-      bar.className = "timeline-bar" + (i === 11 ? " now" : "");
-      var h = heights[currentLevel];
-      bar.style.height = Math.max(8, h - (11-i)*2 + (Math.random()*6)) + "%";
-      bar.style.background = "var(--" + currentLevel + "-dim)";
-      if(i === 11) bar.style.background = "var(--" + currentLevel + ")";
+      bar.className = "timeline-bar now";
+      bar.style.height = "60%";
+      bar.style.background = "var(--" + currentLevel + ")";
       els["timeline-track"].appendChild(bar);
+      return;
     }
+
+    var now = new Date();
+    var threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    var recent = historyPoints.filter(function(p){ return p.time >= threeHoursAgo; });
+    if(!recent.length) recent = historyPoints.slice(-12); // fallback: last N points if none fall in window
+
+    var values = recent.map(function(p){ return p.value; });
+    var minV = Math.min.apply(null, values);
+    var maxV = Math.max.apply(null, values);
+    var range = Math.max(0.5, maxV - minV); // avoid a flat line collapsing to 0 height
+
+    recent.forEach(function(p, i){
+      var level = classify(p.value, p.flag);
+      var isLast = i === recent.length - 1;
+      var bar = document.createElement("div");
+      bar.className = "timeline-bar" + (isLast ? " now" : "");
+      var pct = 25 + ((p.value - minV) / range) * 70; // 25–95% height range, keeps short bars visible
+      bar.style.height = pct + "%";
+      bar.style.background = isLast ? "var(--" + level + ")" : "var(--" + level + "-dim)";
+      bar.title = p.time.toLocaleTimeString("en-SG", {hour:"2-digit", minute:"2-digit"}) + " — " + p.value.toFixed(1) + "°C";
+      els["timeline-track"].appendChild(bar);
+    });
   }
 
   function timeAgo(isoString){
@@ -885,6 +978,14 @@
   // ---------------------------------------------------------------
   // MAIN FLOW
   // ---------------------------------------------------------------
+  function todayDateString(){
+    var d = new Date();
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, "0");
+    var dd = String(d.getDate()).padStart(2, "0");
+    return yyyy + "-" + mm + "-" + dd;
+  }
+
   function run(){
     show("panel-loading");
     els["loading-text"].textContent = "Finding your location";
@@ -902,7 +1003,19 @@
         } else {
           nearest = pickNearest(parsed.stations, bundle.loc.lat, bundle.loc.lon);
         }
-        renderResult(nearest.station, nearest.distanceKm, parsed.timestamp);
+
+        // Fetch today's history for this specific station so the
+        // timeline can show real recent readings. If this fails for
+        // any reason, we still show the current reading — history
+        // is a nice-to-have, not a blocker.
+        return fetchWBGT(todayDateString())
+          .then(function(historyJson){
+            var history = extractStationHistory(historyJson, nearest.station.id);
+            renderResult(nearest.station, nearest.distanceKm, parsed.timestamp, history);
+          })
+          .catch(function(){
+            renderResult(nearest.station, nearest.distanceKm, parsed.timestamp, []);
+          });
       })
       .catch(function(err){
         els["error-title"].textContent = "Couldn't get a reading";
@@ -911,7 +1024,7 @@
       });
   }
 
-  function renderResult(station, distanceKm, timestamp){
+  function renderResult(station, distanceKm, timestamp, history){
     var level = classify(station.value, station.flag);
     var g = GUIDANCE[level];
 
@@ -936,7 +1049,7 @@
         : distanceKm.toFixed(1) + " km away";
     els["reading-age"].textContent = timeAgo(timestamp);
 
-    renderTimeline(level);
+    renderTimeline(history, level);
     show("panel-main");
   }
 
@@ -952,6 +1065,40 @@
     });
   }
 
+  // PLACEHOLDER — real AED data isn't wired in yet (geocoding the
+  // SCDF AED Locations dataset is in progress). This renders sample
+  // entries in the final visual format so the card layout is
+  // complete and ready; swap this for a real nearest-AED lookup
+  // (same pattern as pickNearest for WBGT stations) once
+  // aed-locations.json is available.
+  function renderAEDPlaceholder(){
+    var summary = document.getElementById("aed-summary");
+    var list = document.getElementById("aed-list");
+    var placeholderAEDs = [
+      { name: "Yio Chu Kang Stadium", location: "Level 1, Main Entrance Lobby", distance: "210 m" },
+      { name: "Yio Chu Kang Swimming Complex", location: "Level 1, Reception Counter", distance: "430 m" },
+      { name: "Yio Chu Kang Community Club", location: "Level 1, Outside Office", distance: "850 m" }
+    ];
+
+    summary.textContent = "3 found within 850 m (placeholder — real data coming soon)";
+    list.innerHTML = "";
+    placeholderAEDs.forEach(function(aed){
+      var li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.justifyContent = "space-between";
+      li.style.gap = "10px";
+      li.style.padding = "8px 0";
+      li.style.borderBottom = "1px solid var(--line)";
+      li.innerHTML =
+        "<span style=\"color:var(--paper);\">" + aed.name +
+        "<br><span style=\"font-size:11px; color:var(--paper-dim);\">" + aed.location + "</span></span>" +
+        "<span style=\"font-family:'Barlow Condensed',sans-serif; font-weight:700; white-space:nowrap;\">" + aed.distance + "</span>";
+      list.appendChild(li);
+    });
+    list.lastChild.style.borderBottom = "none";
+  }
+  renderAEDPlaceholder();
+
   els["btn-locate"].addEventListener("click", run);
   els["btn-retry"].addEventListener("click", run);
   els["btn-refresh"].addEventListener("click", run);
@@ -959,6 +1106,14 @@
   document.getElementById("org-toggle").addEventListener("click", function(){
     var body = document.getElementById("org-body");
     var btn = document.getElementById("org-toggle");
+    var expanded = btn.getAttribute("aria-expanded") === "true";
+    btn.setAttribute("aria-expanded", expanded ? "false" : "true");
+    body.classList.toggle("hidden", expanded);
+  });
+
+  document.getElementById("aed-toggle").addEventListener("click", function(){
+    var body = document.getElementById("aed-body");
+    var btn = document.getElementById("aed-toggle");
     var expanded = btn.getAttribute("aria-expanded") === "true";
     btn.setAttribute("aria-expanded", expanded ? "false" : "true");
     body.classList.toggle("hidden", expanded);
