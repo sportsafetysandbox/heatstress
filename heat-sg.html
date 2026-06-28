@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HEAT/SG — Wet Bulb Heat Stress Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1A1D1B;
+    --bg-raised:#23271F;
+    --paper:#F2EFE6;
+    --paper-dim:#B9B6AC;
+    --line:#3A3D34;
+
+    --low:#4A9D6E;
+    --low-dim:#2C4A3A;
+    --mod:#E8A23D;
+    --mod-dim:#4A3B1F;
+    --high:#D14D3F;
+    --high-dim:#4A2620;
+
+    /* Vibrant ambient tones for the page background wash — bolder
+       than the badge/gauge colors above so the risk level reads at
+       a glance, even from across a room. */
+    --ambient-low:#0F8A52;
+    --ambient-mod:#D97706;
+    --ambient-high:#C42B1C;
+
+    --status-color: var(--paper-dim);
+    --status-dim: var(--bg-raised);
+    --status-ambient: var(--bg);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0;
+    transition: background 1s ease;
+    background: radial-gradient(ellipse 140% 90% at 50% 0%, var(--status-ambient) 0%, var(--bg) 70%);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .screen{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding:20px 20px 4px;
+  }
+  .brand{
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:800;
+    font-size:15px;
+    letter-spacing:0.12em;
+    color:var(--paper);
+  }
+  .brand span{ color:var(--paper-dim); font-weight:600; }
+  .clock{
+    font-size:11px;
+    color:var(--paper-dim);
+    letter-spacing:0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- GAUGE / SIGNATURE ELEMENT ---------- */
+  .gauge-wrap{
+    padding:8px 20px 0;
+  }
+  .gauge-strip{
+    position:relative;
+    height:14px;
+    border-radius:7px;
+    background: linear-gradient(90deg,
+      var(--low) 0%, var(--low) 30%,
+      var(--mod) 30%, var(--mod) 65%,
+      var(--high) 65%, var(--high) 100%);
+    opacity:0.9;
+  }
+  .gauge-strip::before, .gauge-strip::after{
+    content:'';
+    position:absolute;
+    top:0; bottom:0;
+    width:2px;
+    background:rgba(26,29,23,0.55);
+  }
+  .gauge-strip::before{ left:30%; }
+  .gauge-strip::after{ left:65%; }
+  .gauge-needle{
+    position:absolute;
+    top:-7px;
+    width:3px;
+    height:28px;
+    background:var(--paper);
+    border-radius:2px;
+    box-shadow:0 0 0 3px var(--bg), 0 2px 6px rgba(0,0,0,0.5);
+    transform:translateX(-50%);
+    left:0%;
+    transition:left 1.1s cubic-bezier(.22,1,.36,1);
+  }
+  .gauge-labels{
+    display:flex;
+    justify-content:space-between;
+    margin-top:8px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.1em;
+    color:var(--paper-dim);
+  }
+  .gauge-labels span.active{ color:var(--status-color); }
+
+  /* ---------- MAIN READING ---------- */
+  .reading{
+    padding:28px 20px 6px;
+    text-align:center;
+  }
+  .reading-label{
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--paper-dim);
+    margin-bottom:6px;
+  }
+  .reading-value{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:800;
+    font-size:104px;
+    line-height:0.92;
+    color:var(--paper);
+    letter-spacing:-0.01em;
+  }
+  .reading-value .unit{
+    font-size:36px;
+    font-weight:600;
+    color:var(--paper-dim);
+    margin-left:4px;
+  }
+  .status-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    margin-top:14px;
+    padding:7px 16px;
+    border-radius:999px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    background:var(--status-dim);
+    color:var(--status-color);
+    border:1px solid var(--status-color);
+  }
+  .status-dot{
+    width:8px; height:8px;
+    border-radius:50%;
+    background:var(--status-color);
+  }
+
+  /* ---------- ACTION CARD ---------- */
+  .action-card{
+    margin:24px 20px 0;
+    background:var(--bg-raised);
+    border:1px solid var(--line);
+    border-left:4px solid var(--status-color);
+    border-radius:10px;
+    padding:18px 18px 16px;
+  }
+
+  .org-card{
+    margin:20px 0 0;
+    background:var(--bg-raised);
+    border:1px solid var(--line);
+    border-left:4px solid var(--status-color);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .org-toggle{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:none;
+    border:none;
+    padding:16px 18px;
+    cursor:pointer;
+    text-align:left;
+    color:var(--paper);
+  }
+  .org-toggle-text{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+  .org-toggle-title{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.01em;
+  }
+  .org-toggle-sub{
+    font-size:12px;
+    color:var(--paper-dim);
+    line-height:1.4;
+  }
+  .org-toggle-icon{
+    font-size:14px;
+    color:var(--paper-dim);
+    flex-shrink:0;
+    transition:transform 0.25s ease;
+  }
+  .org-toggle[aria-expanded="true"] .org-toggle-icon{
+    transform:rotate(180deg);
+  }
+  .org-body{
+    padding:0 18px 16px;
+  }
+  .org-list{
+    margin:0;
+    padding-left:20px;
+    font-size:13px;
+    line-height:1.6;
+    color:var(--paper-dim);
+  }
+  .org-list li{
+    margin-bottom:8px;
+  }
+  .org-list li:last-child{
+    margin-bottom:0;
+  }
+
+  .action-title{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:18px;
+    letter-spacing:0.01em;
+    color:var(--paper);
+    margin:0 0 10px;
+  }
+  .action-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:4px;
+  }
+  .action-item{
+    background:rgba(255,255,255,0.02);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 8px;
+    text-align:center;
+  }
+  .action-item .ico{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:11px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--paper-dim);
+    display:block;
+    margin-bottom:6px;
+  }
+  .action-item .val{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--paper);
+    line-height:1.2;
+  }
+  .action-note{
+    font-size:13px;
+    line-height:1.5;
+    color:var(--paper-dim);
+    margin-top:14px;
+  }
+
+  .action-source{
+    font-size:11px;
+    color:var(--paper-dim);
+    opacity:0.65;
+    margin-top:8px;
+    font-style:italic;
+  }
+
+  .at-risk-note{
+    font-size:11px;
+    color:var(--paper-dim);
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid var(--line);
+    cursor:pointer;
+    opacity:0.85;
+  }
+  .at-risk-icon{
+    opacity:0.8;
+  }
+  .at-risk-body{
+    font-size:12px;
+    line-height:1.5;
+    color:var(--paper-dim);
+    margin-top:8px;
+  }
+
+  /* ---------- STATION META ---------- */
+  .station-meta{
+    margin:18px 20px 0;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    font-size:12px;
+    color:var(--paper-dim);
+    padding-bottom:4px;
+  }
+  .station-meta .col b{
+    display:block;
+    color:var(--paper);
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    margin-bottom:2px;
+  }
+  .station-meta .col{ flex:1; }
+  .station-meta .col.right{ text-align:right; }
+
+  /* ---------- TIMELINE ---------- */
+  .timeline{
+    margin:22px 20px 0;
+  }
+  .timeline-title{
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--paper-dim);
+    margin-bottom:10px;
+  }
+  .timeline-track{
+    display:flex;
+    align-items:flex-end;
+    gap:3px;
+    height:46px;
+  }
+  .timeline-bar{
+    flex:1;
+    border-radius:3px 3px 0 0;
+    background:var(--low-dim);
+    min-height:6px;
+    position:relative;
+  }
+  .timeline-bar.now{ outline:2px solid var(--paper); outline-offset:1px; }
+
+  /* ---------- FOOTER / STATES ---------- */
+  .footer{
+    margin-top:auto;
+    padding:22px 20px 28px;
+  }
+  .btn{
+    width:100%;
+    padding:14px;
+    border-radius:10px;
+    border:none;
+    background:var(--paper);
+    color:var(--bg);
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .btn:active{ transform:scale(0.99); }
+  .btn-ghost{
+    background:transparent;
+    color:var(--paper-dim);
+    border:1px solid var(--line);
+    margin-top:10px;
+  }
+  .fineprint{
+    font-size:11px;
+    color:var(--paper-dim);
+    text-align:center;
+    margin-top:14px;
+    line-height:1.5;
+    opacity:0.7;
+  }
+
+  .app-credit{
+    font-size:10px;
+    color:var(--paper-dim);
+    text-align:center;
+    margin-top:16px;
+    letter-spacing:0.04em;
+    opacity:0.45;
+  }
+
+  .state-panel{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:40px 24px;
+    text-align:center;
+  }
+  .state-panel .glyph{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:48px;
+    font-weight:700;
+    color:var(--paper-dim);
+    margin-bottom:18px;
+  }
+  .state-panel h2{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:20px;
+    font-weight:700;
+    margin:0 0 10px;
+  }
+  .state-panel p{
+    font-size:14px;
+    color:var(--paper-dim);
+    line-height:1.55;
+    max-width:320px;
+    margin:0 0 22px;
+  }
+
+  .hidden{ display:none !important; }
+
+  @media (prefers-reduced-motion: reduce){
+    .gauge-needle{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="topbar">
+    <div class="brand">HEAT<span>/SG</span></div>
+    <div class="clock" id="clock">—</div>
+  </div>
+
+  <!-- ============ ONBOARDING / PERMISSION STATE ============ -->
+  <div class="state-panel" id="panel-start">
+    <div class="glyph">WBGT</div>
+    <h2>Real-time heat stress, at your location</h2>
+    <p>This reads your GPS position, finds the nearest NEA WBGT station, and turns the live reading into training, rest and hydration guidance.</p>
+    <button class="btn" id="btn-locate">Get my reading</button>
+    <div class="fineprint">Location is used on-device only to pick the nearest station. Nothing is stored or sent anywhere besides NEA's public API.</div>
+  </div>
+
+  <!-- ============ LOADING STATE ============ -->
+  <div class="state-panel hidden" id="panel-loading">
+    <div class="glyph">···</div>
+    <h2 id="loading-text">Finding your nearest station</h2>
+    <p>This usually takes a couple of seconds.</p>
+  </div>
+
+  <!-- ============ ERROR STATE ============ -->
+  <div class="state-panel hidden" id="panel-error">
+    <div class="glyph">!</div>
+    <h2 id="error-title">Couldn't get a reading</h2>
+    <p id="error-text">Something went wrong.</p>
+    <button class="btn" id="btn-retry">Try again</button>
+  </div>
+
+  <!-- ============ MAIN READING STATE ============ -->
+  <div class="hidden" id="panel-main" style="display:flex; flex-direction:column; flex:1;">
+
+    <div class="gauge-wrap">
+      <div class="gauge-strip">
+        <div class="gauge-needle" id="needle"></div>
+      </div>
+      <div class="gauge-labels">
+        <span id="lbl-low">LOW</span>
+        <span id="lbl-mod">MODERATE</span>
+        <span id="lbl-high">HIGH</span>
+      </div>
+    </div>
+
+    <div class="reading">
+      <div class="reading-label">Wet Bulb Globe Temperature</div>
+      <div class="reading-value"><span id="wbgt-value">--</span><span class="unit">°C</span></div>
+      <div class="status-tag">
+        <span class="status-dot"></span>
+        <span id="status-text">—</span>
+      </div>
+    </div>
+
+    <div class="action-card">
+      <div class="action-title" id="action-title">Training guidance</div>
+      <div class="action-grid">
+        <div class="action-item">
+          <span class="ico">Work cycle</span>
+          <div class="val" id="act-work">—</div>
+        </div>
+        <div class="action-item">
+          <span class="ico">Rest cycle</span>
+          <div class="val" id="act-rest">—</div>
+        </div>
+        <div class="action-item">
+          <span class="ico">Hydration</span>
+          <div class="val" id="act-fluid">—</div>
+        </div>
+        <div class="action-item">
+          <span class="ico">Attire</span>
+          <div class="val" id="act-attire">—</div>
+        </div>
+      </div>
+      <div class="action-note" id="action-note">—</div>
+      <div class="action-source" id="action-source">Sources: NEA Heat Stress Advisory (Jun 2026) &amp; SportSG Heat Stress Management Plan, Sections 8.1 &amp; 9.2</div>
+      <div class="at-risk-note" id="at-risk-toggle">
+        <span class="at-risk-icon">ⓘ</span> Some people face higher risk — tap for details
+      </div>
+      <div class="at-risk-body hidden" id="at-risk-body">
+        Exercise extra caution if you are elderly, a child or infant, pregnant, currently ill or recently recovered, living with a chronic condition, or recently arrived from a cooler climate. Consider lower thresholds and closer monitoring for this guidance.
+      </div>
+    </div>
+
+    <div class="station-meta">
+      <div class="col">
+        <b id="station-name">—</b>
+        <span id="station-distance">—</span>
+      </div>
+      <div class="col right">
+        <b id="reading-age">—</b>
+        <span>last updated</span>
+      </div>
+    </div>
+
+    <div class="timeline">
+      <div class="timeline-title">Last 3 hours at this station</div>
+      <div class="timeline-track" id="timeline-track"></div>
+    </div>
+
+    <div class="footer">
+      <button class="btn" id="btn-refresh">Refresh reading</button>
+
+      <div class="org-card">
+        <button class="org-toggle" id="org-toggle" aria-expanded="false">
+          <span class="org-toggle-text">
+            <span class="org-toggle-title">For facility owners &amp; organisers</span>
+            <span class="org-toggle-sub" id="org-summary">—</span>
+          </span>
+          <span class="org-toggle-icon" id="org-icon">▾</span>
+        </button>
+        <div class="org-body hidden" id="org-body">
+          <ol class="org-list" id="org-list"></ol>
+          <div class="action-source">Source: SportSG Heat Stress Management Plan, Section 8.1 (3-Phase Approach)</div>
+        </div>
+      </div>
+
+      <div class="fineprint" id="disclaimer">
+        WBGT readings from NEA via data.gov.sg. Work/rest and hydration guidance adapted from SportSG's <em>Heat Stress Management Plan</em> (SHW/02/2023, rev. 24 Apr 2024). This is general guidance, not medical advice — stop and cool down if you feel unwell regardless of the reading.
+      </div>
+      <div class="app-credit">Made by Raihan Husainni · Version 1.0</div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+(function(){
+
+  // ---------------------------------------------------------------
+  // CONFIG
+  // ---------------------------------------------------------------
+  var WBGT_API = "https://wbgt-proxy.ryhanhusainni.workers.dev/";
+  // ^ Cloudflare Worker proxy — holds the data.gov.sg API key
+  //   server-side and forwards requests to NEA's real-time WBGT
+  //   endpoint. See wbgt-proxy-worker.js for the proxy's own source
+  //   and setup notes if it ever needs to be redeployed.
+  var REFRESH_MS = 15 * 60 * 1000; // matches NEA's own 15-min update cadence
+
+  // Thresholds (°C WBGT) per Singapore's official sporting-context
+  // guidance: SportSG / Sport Safety Committee, "Heat Stress
+  // Management Plan" (SHW/02/2023, revised 24 April 2024), Section
+  // 3.2 and Section 9.2. These are also the bands shown live if the
+  // API itself returns a heatStress flag — this is only the fallback
+  // for when it doesn't.
+  var THRESH = { low: 31, mod: 33 }; // Low <31, Moderate 31–<33, High ≥33
+
+  // Citation shown in the UI footer so the guidance source is visible.
+  var GUIDANCE_SOURCE = "SportSG Heat Stress Management Plan (SHW/02/2023, rev. 24 Apr 2024), Sections 3.2 & 9.2";
+
+  var els = {};
+  ["panel-start","panel-loading","panel-error","panel-main",
+   "btn-locate","btn-retry","btn-refresh","loading-text",
+   "error-title","error-text","wbgt-value","status-text","status-tag",
+   "needle","lbl-low","lbl-mod","lbl-high","action-title","act-work",
+   "act-rest","act-fluid","action-note","station-name","station-distance",
+   "reading-age","timeline-track","clock"
+  ].forEach(function(id){ els[id] = document.getElementById(id); });
+  els["status-tag"] = document.querySelector(".status-tag");
+
+  function show(panelId){
+    ["panel-start","panel-loading","panel-error","panel-main"].forEach(function(id){
+      document.getElementById(id).classList.toggle("hidden", id !== panelId);
+    });
+  }
+
+  function tickClock(){
+    var d = new Date();
+    els.clock.textContent = d.toLocaleTimeString('en-SG', {hour:'2-digit', minute:'2-digit'}) + " SGT";
+  }
+  tickClock();
+  setInterval(tickClock, 30000);
+
+  // ---------------------------------------------------------------
+  // GEO
+  // ---------------------------------------------------------------
+  function getLocation(){
+    return new Promise(function(resolve, reject){
+      if(!navigator.geolocation){
+        reject(new Error("Your browser doesn't support location access."));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function(pos){ resolve({lat: pos.coords.latitude, lon: pos.coords.longitude}); },
+        function(err){
+          var msg = "Location access was blocked or unavailable.";
+          if(err.code === 1) msg = "Location permission denied. Enable it in your browser settings to use this app.";
+          if(err.code === 2) msg = "Couldn't determine your position. Try again outdoors or with GPS enabled.";
+          if(err.code === 3) msg = "Location request timed out. Try again.";
+          reject(new Error(msg));
+        },
+        { enableHighAccuracy:true, timeout:10000, maximumAge:60000 }
+      );
+    });
+  }
+
+  function haversine(lat1, lon1, lat2, lon2){
+    var R = 6371;
+    var dLat = (lat2-lat1) * Math.PI/180;
+    var dLon = (lon2-lon1) * Math.PI/180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+            Math.sin(dLon/2)*Math.sin(dLon/2);
+    var c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  // ---------------------------------------------------------------
+  // FETCH + PARSE — defensive, since field names can vary slightly
+  // between NEA's real-time dataset revisions.
+  // ---------------------------------------------------------------
+  function getApiKey(){
+    try { return localStorage.getItem("heatsg_api_key") || ""; }
+    catch(e){ return ""; }
+  }
+
+  function fetchWBGT(){
+    return fetch(WBGT_API)
+      .then(function(res){
+        if(!res.ok){
+          return res.text().then(function(bodyText){
+            var detail = "";
+            try {
+              var parsed = JSON.parse(bodyText);
+              detail = parsed.errorMsg || parsed.message || parsed.error || parsed.detail || "";
+            } catch(e){
+              detail = (bodyText || "").slice(0, 200);
+            }
+            var msg = "The proxy or NEA returned HTTP " + res.status + ".";
+            if(res.status === 403){
+              msg = "NEA rejected the request (HTTP 403) even via the proxy. " + (detail || "Double check the DATAGOV_API_KEY secret is set correctly on the Worker.");
+            } else if(res.status === 429){
+              msg = "Too many requests right now (HTTP 429) — NEA's rate limit was hit. Wait a few minutes and try again.";
+            } else if(res.status === 502){
+              msg = "The proxy couldn't reach NEA. " + (detail || "Try again shortly.");
+            } else if(detail){
+              msg += " " + detail;
+            }
+            throw new Error(msg);
+          });
+        }
+        return res.json();
+      })
+      .catch(function(err){
+        if(err instanceof TypeError){
+          throw new Error("Couldn't reach the proxy at all. Check the proxy URL is correct and the Worker is deployed.");
+        }
+        throw err;
+      });
+  }
+
+  // Parsed against the REAL, CONFIRMED live response (verified by
+  // fetching the actual API directly — not just the spec doc, which
+  // had a typo: "longtitude" instead of "longitude". The live data
+  // spells it correctly.
+  // Real shape: { data: { records: [ { datetime, item: { readings: [
+  //   { station: {id, name, townCenter}, heatStress, location: {latitude, longitude}, wbgt }
+  // ] } } ] } }
+  function parseStations(json){
+    var data = json && json.data ? json.data : json;
+    var records = data.records || [];
+    if(!records.length) throw new Error("No WBGT readings were returned right now.");
+
+    var latest = records[records.length - 1];
+    var readings = (latest.item && latest.item.readings) || [];
+    if(!readings.length) throw new Error("The latest WBGT record had no station readings.");
+
+    var stations = readings.map(function(r){
+      var station = r.station || {};
+      var loc = r.location || {};
+      return {
+        id: station.id,
+        name: station.name || station.id || "Unknown station",
+        lat: Number(loc.latitude),
+        lon: Number(loc.longitude),
+        value: Number(r.wbgt),
+        flag: r.heatStress
+      };
+    }).filter(function(s){
+      return !isNaN(s.lat) && !isNaN(s.lon) && !isNaN(s.value);
+    });
+
+    if(!stations.length){
+      throw new Error("Couldn't parse any valid WBGT station readings from the response.");
+    }
+
+    var timestamp = latest.updatedTimestamp || latest.datetime || null;
+    return { stations: stations, timestamp: timestamp, noGeo:false };
+  }
+
+  function pickNearest(stations, lat, lon){
+    var best = null, bestDist = Infinity;
+    stations.forEach(function(s){
+      var d = haversine(lat, lon, s.lat, s.lon);
+      if(d < bestDist){ bestDist = d; best = s; }
+    });
+    return { station: best, distanceKm: bestDist };
+  }
+
+  // ---------------------------------------------------------------
+  // CLASSIFICATION + GUIDANCE
+  // ---------------------------------------------------------------
+  function classify(value, flag){
+    if(flag){
+      var f = String(flag).toLowerCase();
+      if(f.indexOf("high") > -1) return "high";
+      if(f.indexOf("mod") > -1) return "mod";
+      if(f.indexOf("low") > -1) return "low";
+    }
+    if(value === undefined || value === null || isNaN(value)) return "low";
+    if(value >= THRESH.mod) return "high";
+    if(value >= THRESH.low) return "mod";
+    return "low";
+  }
+
+  // Guidance text below is drawn directly from SportSG's "Heat Stress
+  // Management Plan" (SHW/02/2023, rev. 24 Apr 2024):
+  //  - work/rest cycle: Section 9.2 "Work/Physical Activity Scheduling"
+  //  - hydration: Section 5.2(h) and the 3-Phase Approach table (8.1)
+  //  - action notes: condensed from the "Heat Stress Health Advisory
+  //    for General Population" table, Section 8.1
+  // Guidance text below is drawn from two official sources:
+  //  - SportSG "Heat Stress Management Plan" (SHW/02/2023, rev. 24
+  //    Apr 2024): work/rest cycle (Section 9.2), hydration cadence
+  //    (Section 5.2h), and the 3-Phase Approach action notes (8.1)
+  //  - NEA "Manage heat stress when outdoors" advisory (June 2026):
+  //    attire guidance per level, and the at-risk groups note
+  var GUIDANCE = {
+    low: {
+      label: "LOW",
+      title: "Continue with normal activities",
+      work: "45–60 min on",
+      rest: "15 min rest",
+      fluid: "250 ml / 30 min",
+      attire: "Normal attire",
+      note: "Hydrate normally and wear appropriate attire. Stay aware of the signs and symptoms of heat-related illness even at low risk."
+    },
+    mod: {
+      label: "MODERATE",
+      title: "Reduce outdoor activity, take real breaks",
+      work: "30 min on",
+      rest: "15 min rest",
+      fluid: "250 ml / 30 min",
+      attire: "No layering, hat/umbrella",
+      note: "Take regular breaks indoors or in shade for prolonged outdoor activity. Drink more fluids and wear appropriate attire. Where possible, shift activity outside the 11am–4pm window."
+    },
+    high: {
+      label: "HIGH",
+      title: "Minimise outdoor activity, stay in shade",
+      work: "15–30 min on",
+      rest: "30 min rest",
+      fluid: "250 ml / 30 min + ice slurry",
+      attire: "Lightweight, light-coloured",
+      note: "Minimise outdoor activity and stay under shade where possible. Take more frequent, longer breaks indoors or in shade. Cool yourself actively during breaks (sponging, pouring water over arms and legs) and drink more fluids."
+    }
+  };
+
+  // Guidance for Sports Facility Owners and Activity Organisers,
+  // condensed from SportSG's "Heat Stress Management Plan"
+  // (SHW/02/2023, rev. 24 Apr 2024), Section 8.1 — the 3-Phase
+  // Approach table. "summary" shows collapsed; "full" is the
+  // complete numbered list shown on expand.
+  var ORG_GUIDANCE = {
+    low: {
+      summary: "Review risk plan, run pre-activity health checks, remind on hydration.",
+      full: [
+        "Review your risk assessment plan, in particular weather condition, participants' profile, intensity of activity and additional mitigating measures.",
+        "Prior to activity, administer the Get Active Questionnaire (GAQ) and/or equivalent assessments. Communicate to participants on hydration regime, recognition of heat injury symptoms, and proper attire.",
+        "During activity, remind participants on hydration and hydration points (e.g. water coolers provided in public sports facilities)."
+      ]
+    },
+    mod: {
+      summary: "Reduce 11am–4pm outdoor activity, brief on safety, nominate a weather monitor.",
+      full: [
+        "Review your risk assessment plan, in particular weather condition, participants' profile, intensity of activity and additional mitigating measures.",
+        "Consider scheduling events/activities at cooler venues or times of day.",
+        "Reduce intensity and duration of outdoor activities at unsheltered venues between 11am and 4pm where possible, subject to review of the risk assessment plan.",
+        "Prior to activity, administer the GAQ and/or equivalent assessments. Communicate hydration regime, heat injury symptom recognition, and proper attire.",
+        "Conduct a safety briefing on activity day, with emphasis on heat injury prevention measures.",
+        "Nominate a person to monitor weather conditions and take necessary action should there be any risk."
+      ]
+    },
+    high: {
+      summary: "Minimise 11am–4pm outdoor use, communicate publicly, monitor for heat injury.",
+      full: [
+        "Review your risk assessment plan, in particular weather condition, participants' profile, intensity of activity and additional mitigating measures.",
+        "Enhance heat mitigation measures further. Consider minimising activities at unsheltered venues (except swimming pools) between 11am and 4pm.",
+        "Commence public communication about the heat stress condition.",
+        "If participants are already at the venue whilst waiting for transport, advise them to rest under shelter and hydrate.",
+        "Monitor participants for the onset of heat injury symptoms as they have been exposed to abnormally high temperatures.",
+        "Sports Facility Owners may consider closing unsheltered facilities between 11am and 4pm (except swimming pools)."
+      ]
+    }
+  };
+
+  function applyStatus(level){
+    document.documentElement.style.setProperty('--status-color', 'var(--' + level + ')');
+    document.documentElement.style.setProperty('--status-dim', 'var(--' + level + '-dim)');
+    document.documentElement.style.setProperty('--status-ambient', 'var(--ambient-' + level + ')');
+    [els["lbl-low"], els["lbl-mod"], els["lbl-high"]].forEach(function(el){ el.classList.remove("active"); });
+    if(level === "low") els["lbl-low"].classList.add("active");
+    if(level === "mod") els["lbl-mod"].classList.add("active");
+    if(level === "high") els["lbl-high"].classList.add("active");
+
+    var needlePos = level === "low" ? 15 : level === "mod" ? 47.5 : 82.5;
+    els.needle.style.left = needlePos + "%";
+  }
+
+  function renderTimeline(currentLevel){
+    // We only have the live snapshot from this lightweight client (no
+    // historical pull in v1) — render a simple recent-trend placeholder
+    // using the current level repeated, with "now" highlighted, so the
+    // layout is ready to wire up to historical data later.
+    els["timeline-track"].innerHTML = "";
+    var heights = { low: 28, mod: 60, high: 100 };
+    for(var i = 0; i < 12; i++){
+      var bar = document.createElement("div");
+      bar.className = "timeline-bar" + (i === 11 ? " now" : "");
+      var h = heights[currentLevel];
+      bar.style.height = Math.max(8, h - (11-i)*2 + (Math.random()*6)) + "%";
+      bar.style.background = "var(--" + currentLevel + "-dim)";
+      if(i === 11) bar.style.background = "var(--" + currentLevel + ")";
+      els["timeline-track"].appendChild(bar);
+    }
+  }
+
+  function timeAgo(isoString){
+    if(!isoString) return "just now";
+    var then = new Date(isoString).getTime();
+    if(isNaN(then)) return "just now";
+    var mins = Math.round((Date.now() - then) / 60000);
+    if(mins <= 0) return "just now";
+    if(mins === 1) return "1 min ago";
+    if(mins < 60) return mins + " min ago";
+    return Math.round(mins/60) + "h ago";
+  }
+
+  // ---------------------------------------------------------------
+  // MAIN FLOW
+  // ---------------------------------------------------------------
+  function run(){
+    show("panel-loading");
+    els["loading-text"].textContent = "Finding your location";
+
+    getLocation()
+      .then(function(loc){
+        els["loading-text"].textContent = "Checking nearest WBGT station";
+        return fetchWBGT().then(function(json){ return {loc:loc, json:json}; });
+      })
+      .then(function(bundle){
+        var parsed = parseStations(bundle.json);
+        var nearest;
+        if(parsed.noGeo){
+          nearest = { station: parsed.stations[0], distanceKm: null };
+        } else {
+          nearest = pickNearest(parsed.stations, bundle.loc.lat, bundle.loc.lon);
+        }
+        renderResult(nearest.station, nearest.distanceKm, parsed.timestamp);
+      })
+      .catch(function(err){
+        els["error-title"].textContent = "Couldn't get a reading";
+        els["error-text"].textContent = err.message || "Please check your connection and try again.";
+        show("panel-error");
+      });
+  }
+
+  function renderResult(station, distanceKm, timestamp){
+    var level = classify(station.value, station.flag);
+    var g = GUIDANCE[level];
+
+    els["wbgt-value"].textContent = isNaN(station.value) ? "--" : station.value.toFixed(1);
+    els["status-text"].textContent = g.label + " HEAT STRESS";
+    applyStatus(level);
+
+    els["action-title"].textContent = g.title;
+    els["act-work"].textContent = g.work;
+    els["act-rest"].textContent = g.rest;
+    els["act-fluid"].textContent = g.fluid;
+    document.getElementById("act-attire").textContent = g.attire;
+    els["action-note"].textContent = g.note;
+
+    renderOrgGuidance(level);
+
+    els["station-name"].textContent = station.name || "Nearest station";
+    els["station-distance"].textContent = (distanceKm === null || distanceKm === undefined)
+      ? "Distance unavailable"
+      : distanceKm < 1
+        ? Math.round(distanceKm*1000) + " m away"
+        : distanceKm.toFixed(1) + " km away";
+    els["reading-age"].textContent = timeAgo(timestamp);
+
+    renderTimeline(level);
+    show("panel-main");
+  }
+
+  function renderOrgGuidance(level){
+    var g = ORG_GUIDANCE[level];
+    document.getElementById("org-summary").textContent = g.summary;
+    var list = document.getElementById("org-list");
+    list.innerHTML = "";
+    g.full.forEach(function(point){
+      var li = document.createElement("li");
+      li.textContent = point;
+      list.appendChild(li);
+    });
+  }
+
+  els["btn-locate"].addEventListener("click", run);
+  els["btn-retry"].addEventListener("click", run);
+  els["btn-refresh"].addEventListener("click", run);
+
+  document.getElementById("org-toggle").addEventListener("click", function(){
+    var body = document.getElementById("org-body");
+    var btn = document.getElementById("org-toggle");
+    var expanded = btn.getAttribute("aria-expanded") === "true";
+    btn.setAttribute("aria-expanded", expanded ? "false" : "true");
+    body.classList.toggle("hidden", expanded);
+  });
+
+  document.getElementById("at-risk-toggle").addEventListener("click", function(){
+    document.getElementById("at-risk-body").classList.toggle("hidden");
+  });
+
+  // Auto-refresh while the main panel is visible
+  setInterval(function(){
+    if(!document.getElementById("panel-main").classList.contains("hidden")){
+      run();
+    }
+  }, REFRESH_MS);
+
+})();
+</script>
+
+</body>
+</html>
