@@ -496,6 +496,10 @@
     <h2 id="error-title">Couldn't get a reading</h2>
     <p id="error-text">Something went wrong.</p>
     <button class="btn" id="btn-retry">Try again</button>
+    <div class="hidden" id="permission-help" style="margin-top:20px; width:100%; max-width:320px; text-align:left; background:var(--bg-raised); border:1px solid var(--line); border-radius:10px; padding:16px;">
+      <div style="font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; margin-bottom:10px;" id="permission-help-title">How to turn location back on</div>
+      <ol id="permission-help-steps" style="margin:0; padding-left:20px; font-size:13px; line-height:1.7; color:var(--paper-dim);"></ol>
+    </div>
   </div>
 
   <!-- ============ MAIN READING STATE ============ -->
@@ -673,14 +677,109 @@
         function(pos){ resolve({lat: pos.coords.latitude, lon: pos.coords.longitude}); },
         function(err){
           var msg = "Location access was blocked or unavailable.";
-          if(err.code === 1) msg = "Location permission denied. Enable it in your browser settings to use this app.";
+          if(err.code === 1) msg = "Location permission is turned off for this site.";
           if(err.code === 2) msg = "Couldn't determine your position. Try again outdoors or with GPS enabled.";
           if(err.code === 3) msg = "Location request timed out. Try again.";
-          reject(new Error(msg));
+          var locError = new Error(msg);
+          locError.isPermissionDenied = (err.code === 1);
+          reject(locError);
         },
         { enableHighAccuracy:true, timeout:10000, maximumAge:60000 }
       );
     });
+  }
+
+  // Detects the platform/browser so we can show the EXACT menu path
+  // to re-enable location — generic "check your settings" advice is
+  // useless to someone who's never had to do this before.
+  function detectPlatform(){
+    var ua = navigator.userAgent || "";
+    var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    var isAndroid = /Android/.test(ua);
+    var isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua);
+    var isChrome = /Chrome|CriOS/.test(ua) && !/Edg/.test(ua);
+    var isFirefox = /Firefox|FxiOS/.test(ua);
+    var isEdge = /Edg/.test(ua);
+
+    if(isIOS && isSafari) return "ios-safari";
+    if(isIOS && isChrome) return "ios-chrome";
+    if(isAndroid && isChrome) return "android-chrome";
+    if(isAndroid && isFirefox) return "android-firefox";
+    if(isChrome) return "desktop-chrome";
+    if(isFirefox) return "desktop-firefox";
+    if(isEdge) return "desktop-edge";
+    if(isSafari) return "desktop-safari";
+    return "unknown";
+  }
+
+  var PERMISSION_FIX_STEPS = {
+    "ios-safari": [
+      "Open the iPhone <b>Settings</b> app",
+      "Scroll down and tap <b>Safari</b>",
+      "Tap <b>Location</b>, then choose <b>Ask</b> or <b>Allow</b>",
+      "Come back to this page and tap \u201cTry again\u201d"
+    ],
+    "ios-chrome": [
+      "Open the iPhone <b>Settings</b> app",
+      "Scroll down and tap <b>Chrome</b>",
+      "Tap <b>Location</b>, then choose <b>Ask Next Time</b> or <b>Allow</b>",
+      "Come back to this page and tap \u201cTry again\u201d"
+    ],
+    "android-chrome": [
+      "Tap the <b>lock icon</b> (\ud83d\udd12) in the address bar above",
+      "Tap <b>Permissions</b>",
+      "Find <b>Location</b> and set it to <b>Allow</b>",
+      "Tap \u201cTry again\u201d below"
+    ],
+    "android-firefox": [
+      "Tap the <b>lock icon</b> (\ud83d\udd12) in the address bar above",
+      "Tap <b>Permissions</b>",
+      "Turn on <b>Location</b>",
+      "Tap \u201cTry again\u201d below"
+    ],
+    "desktop-chrome": [
+      "Click the <b>lock icon</b> (\ud83d\udd12) to the left of the address bar",
+      "Click <b>Site settings</b>",
+      "Set <b>Location</b> to <b>Allow</b>",
+      "Reload this page"
+    ],
+    "desktop-edge": [
+      "Click the <b>lock icon</b> (\ud83d\udd12) to the left of the address bar",
+      "Click <b>Permissions for this site</b>",
+      "Set <b>Location</b> to <b>Allow</b>",
+      "Reload this page"
+    ],
+    "desktop-firefox": [
+      "Click the <b>lock icon</b> (\ud83d\udd12) to the left of the address bar",
+      "Click the arrow next to <b>Blocked</b> for Location",
+      "Click <b>Remove</b> next to this site, then reload",
+      "Allow location when asked"
+    ],
+    "desktop-safari": [
+      "Open <b>Safari</b> menu \u2192 <b>Settings</b> \u2192 <b>Websites</b>",
+      "Click <b>Location</b> in the left list",
+      "Find this site and set it to <b>Allow</b>",
+      "Reload this page"
+    ],
+    "unknown": [
+      "Look for a lock or info icon in your browser's address bar",
+      "Open its site permissions or settings",
+      "Turn <b>Location</b> on for this site",
+      "Reload this page"
+    ]
+  };
+
+  function showPermissionHelp(){
+    var platform = detectPlatform();
+    var steps = PERMISSION_FIX_STEPS[platform] || PERMISSION_FIX_STEPS["unknown"];
+    var list = document.getElementById("permission-help-steps");
+    list.innerHTML = "";
+    steps.forEach(function(step){
+      var li = document.createElement("li");
+      li.innerHTML = step;
+      list.appendChild(li);
+    });
+    document.getElementById("permission-help").classList.remove("hidden");
   }
 
   function haversine(lat1, lon1, lat2, lon2){
@@ -1021,6 +1120,11 @@
       .catch(function(err){
         els["error-title"].textContent = "Couldn't get a reading";
         els["error-text"].textContent = err.message || "Please check your connection and try again.";
+        document.getElementById("permission-help").classList.add("hidden");
+        if(err.isPermissionDenied){
+          els["error-title"].textContent = "Location is turned off";
+          showPermissionHelp();
+        }
         show("panel-error");
       });
   }
