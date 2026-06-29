@@ -199,6 +199,68 @@
     border-radius:10px;
     overflow:hidden;
   }
+
+  .lightning-card{
+    margin:20px 20px 0;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 16px;
+    border-radius:10px;
+    background:var(--bg-raised);
+    border:1px solid var(--line);
+    border-left:4px solid var(--paper-dim);
+    transition: background 0.4s ease, border-color 0.4s ease;
+  }
+  .lightning-icon{
+    font-size:22px;
+    line-height:1;
+    flex-shrink:0;
+    opacity:0.6;
+  }
+  .lightning-text{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+  }
+  .lightning-title{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    color:var(--paper);
+  }
+  .lightning-sub{
+    font-size:12px;
+    color:var(--paper-dim);
+    line-height:1.4;
+  }
+  .lightning-card.is-alert{
+    background:var(--high-dim);
+    border-color:var(--high);
+    animation: lightning-pulse 1.8s ease-in-out infinite;
+  }
+  .lightning-card.is-alert .lightning-icon{
+    opacity:1;
+  }
+  .lightning-card.is-alert .lightning-title{
+    color:var(--high);
+  }
+  @keyframes lightning-pulse{
+    0%, 100% { box-shadow: 0 0 0 0 rgba(209, 77, 63, 0.0); }
+    50% { box-shadow: 0 0 0 4px rgba(209, 77, 63, 0.15); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .lightning-card.is-alert{ animation:none; }
+  }
+
+  .lightning-card.is-clear{
+    border-left-color:var(--low);
+  }
+  .lightning-card.is-clear .lightning-icon{
+    opacity:0.5;
+  }
+
   .org-toggle{
     width:100%;
     display:flex;
@@ -525,6 +587,14 @@
       </div>
     </div>
 
+    <div class="lightning-card" id="lightning-card">
+      <div class="lightning-icon" id="lightning-icon">⚡</div>
+      <div class="lightning-text">
+        <div class="lightning-title" id="lightning-title">Checking for lightning…</div>
+        <div class="lightning-sub" id="lightning-sub">—</div>
+      </div>
+    </div>
+
     <div class="action-card">
       <div class="action-title" id="action-title">Training guidance</div>
       <div class="action-grid">
@@ -802,10 +872,11 @@
     catch(e){ return ""; }
   }
 
-  function fetchWBGT(dateParam){
+  function fetchProxy(apiName, dateParam){
     var url = WBGT_API;
+    url += (url.indexOf("?") > -1 ? "&" : "?") + "api=" + encodeURIComponent(apiName);
     if(dateParam){
-      url += (url.indexOf("?") > -1 ? "&" : "?") + "date=" + encodeURIComponent(dateParam);
+      url += "&date=" + encodeURIComponent(dateParam);
     }
     return fetch(url)
       .then(function(res){
@@ -839,6 +910,14 @@
         }
         throw err;
       });
+  }
+
+  function fetchWBGT(dateParam){
+    return fetchProxy("wbgt", dateParam);
+  }
+
+  function fetchLightning(dateParam){
+    return fetchProxy("lightning", dateParam);
   }
 
   // Parsed against the REAL, CONFIRMED live response (verified by
@@ -916,9 +995,55 @@
     return points;
   }
 
-  // ---------------------------------------------------------------
-  // CLASSIFICATION + GUIDANCE
-  // ---------------------------------------------------------------
+  // Parses a lightning API response (confirmed against the real
+  // OpenAPI spec for this endpoint) into a flat list of strikes:
+  // [{ time: Date, lat, lon, type: "C"|"G", text }]
+  // "C" = cloud-to-cloud, "G" = cloud-to-ground (the dangerous kind).
+  // Unlike WBGT, lightning readings have no station — each one is a
+  // discrete event with its own coordinates.
+  function parseLightning(json){
+    var data = json && json.data ? json.data : json;
+    var records = data.records || [];
+    var strikes = [];
+
+    records.forEach(function(record){
+      var readings = (record.item && record.item.readings) || [];
+      readings.forEach(function(r){
+        var loc = r.location || {};
+        var lat = Number(loc.latitude);
+        var lon = Number(loc.longitude);
+        if(isNaN(lat) || isNaN(lon)) return;
+        var time = r.datetime ? new Date(r.datetime) : null;
+        strikes.push({
+          time: time,
+          lat: lat,
+          lon: lon,
+          type: r.type,
+          text: r.text
+        });
+      });
+    });
+
+    return strikes;
+  }
+
+  // Filters strikes to ones within radiusKm of the given point, and
+  // sorts nearest-first. Distance is computed with the same
+  // haversine function already used for WBGT stations and AEDs.
+  function findNearbyLightning(strikes, lat, lon, radiusKm){
+    return strikes
+      .map(function(s){
+        return {
+          time: s.time,
+          type: s.type,
+          text: s.text,
+          distanceKm: haversine(lat, lon, s.lat, s.lon)
+        };
+      })
+      .filter(function(s){ return s.distanceKm <= radiusKm; })
+      .sort(function(a, b){ return a.distanceKm - b.distanceKm; });
+  }
+
   function classify(value, flag){
     if(flag){
       var f = String(flag).toLowerCase();
@@ -1093,6 +1218,7 @@
       .then(function(loc){
         els["loading-text"].textContent = "Checking nearest WBGT station";
         loadNearestAEDs(loc.lat, loc.lon); // fires independently — AED card updates whenever it's ready, doesn't block the main reading
+        loadLightningStatus(loc.lat, loc.lon); // same — independent of the main WBGT flow
         return fetchWBGT().then(function(json){ return {loc:loc, json:json}; });
       })
       .then(function(bundle){
@@ -1253,6 +1379,70 @@
       });
   }
 
+  var LIGHTNING_RADIUS_KM = 6;
+  // ^ NEA: most lightning strokes occur within 5-6km of a thunderstorm
+  //   cloud — this matches their own published safety guidance.
+  var lastKnownLocation = null; // cached so the faster lightning-only refresh can reuse it
+
+  function renderLightningState(state, detail){
+    var card = document.getElementById("lightning-card");
+    var icon = document.getElementById("lightning-icon");
+    var title = document.getElementById("lightning-title");
+    var sub = document.getElementById("lightning-sub");
+
+    card.classList.remove("is-alert", "is-clear");
+
+    if(state === "alert"){
+      card.classList.add("is-alert");
+      icon.textContent = "⚡";
+      title.textContent = "Lightning risk nearby";
+      sub.textContent = detail;
+    } else if(state === "clear"){
+      card.classList.add("is-clear");
+      icon.textContent = "⚡";
+      title.textContent = "No lightning detected nearby";
+      sub.textContent = "Within " + LIGHTNING_RADIUS_KM + " km, last 30 min · NEA Lightning Observation";
+    } else if(state === "error"){
+      icon.textContent = "⚡";
+      title.textContent = "Lightning data unavailable";
+      sub.textContent = detail || "Couldn't load lightning data right now.";
+    } else {
+      icon.textContent = "⚡";
+      title.textContent = "Checking for lightning…";
+      sub.textContent = "—";
+    }
+  }
+
+  function loadLightningStatus(lat, lon){
+    lastKnownLocation = { lat: lat, lon: lon };
+    renderLightningState("loading");
+    fetchLightning()
+      .then(function(json){
+        var strikes = parseLightning(json);
+        // Only consider strikes from the last 30 minutes — lightning
+        // observations are discrete events, not a station reading,
+        // so an old strike from hours ago isn't a current risk.
+        var cutoff = new Date(Date.now() - 30 * 60 * 1000);
+        var recent = strikes.filter(function(s){ return s.time && s.time >= cutoff; });
+        var nearby = findNearbyLightning(recent, lat, lon, LIGHTNING_RADIUS_KM);
+
+        if(nearby.length){
+          var closest = nearby[0];
+          var distLabel = closest.distanceKm < 1
+            ? Math.round(closest.distanceKm * 1000) + " m"
+            : closest.distanceKm.toFixed(1) + " km";
+          var typeLabel = closest.type === "G" ? "cloud-to-ground" : "cloud-to-cloud";
+          renderLightningState("alert",
+            nearby.length + " strike" + (nearby.length > 1 ? "s" : "") + " detected within " + LIGHTNING_RADIUS_KM + "km — nearest " + distLabel + " (" + typeLabel + "). Consider moving indoors.");
+        } else {
+          renderLightningState("clear");
+        }
+      })
+      .catch(function(err){
+        renderLightningState("error", err.message);
+      });
+  }
+
   els["btn-locate"].addEventListener("click", run);
 
   els["btn-retry"].addEventListener("click", run);
@@ -1284,6 +1474,16 @@
       run();
     }
   }, REFRESH_MS);
+
+  // Lightning gets its own faster refresh — NEA updates this dataset
+  // every 2 minutes, much more frequently than WBGT, since a storm
+  // can develop well within the main 15-minute refresh window.
+  var LIGHTNING_REFRESH_MS = 2 * 60 * 1000;
+  setInterval(function(){
+    if(lastKnownLocation && !document.getElementById("panel-main").classList.contains("hidden")){
+      loadLightningStatus(lastKnownLocation.lat, lastKnownLocation.lon);
+    }
+  }, LIGHTNING_REFRESH_MS);
 
 })();
 </script>
