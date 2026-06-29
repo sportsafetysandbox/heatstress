@@ -200,77 +200,85 @@
     overflow:hidden;
   }
 
-  .alert-row{
+  .mini-reading-row{
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:10px;
-    margin:20px 20px 0;
+    gap:0;
+    margin:22px 20px 0;
+    text-align:center;
   }
-  .lightning-card{
-    margin:0;
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start;
-    gap:8px;
-    padding:14px;
-    border-radius:10px;
-    background:var(--bg-raised);
-    border:1px solid var(--line);
-    border-left:4px solid var(--paper-dim);
-    transition: background 0.4s ease, border-color 0.4s ease;
-    min-width:0;
+  .mini-reading{
+    padding:0 8px;
   }
-  .lightning-icon{
-    font-size:18px;
-    line-height:1;
-    flex-shrink:0;
-    opacity:0.6;
-  }
-  .lightning-text{
-    display:flex;
-    flex-direction:column;
-    gap:2px;
-    min-width:0;
-    width:100%;
-  }
-  .lightning-title{
-    font-family:'Barlow Condensed',sans-serif;
-    font-weight:700;
-    font-size:13px;
-    color:var(--paper);
-    line-height:1.25;
-  }
-  .lightning-sub{
-    font-size:11px;
+  .mini-reading-label{
+    font-size:10px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
     color:var(--paper-dim);
-    line-height:1.4;
-    word-wrap:break-word;
+    margin-bottom:4px;
+    opacity:0.85;
   }
-  .lightning-card.is-alert{
-    background:var(--high-dim);
-    border-color:var(--high);
-    animation: lightning-pulse 1.8s ease-in-out infinite;
+  .mini-reading-value{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:800;
+    font-size:26px;
+    line-height:1;
+    color:var(--paper);
+    letter-spacing:-0.01em;
+    transition: color 0.4s ease;
   }
-  .lightning-card.is-alert .lightning-icon{
-    opacity:1;
+  .mini-status-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    margin-top:8px;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:0.03em;
+    background:var(--status-dim);
+    color:var(--paper-dim);
+    border:1px solid var(--line);
+    max-width:100%;
+    transition: background 0.4s ease, border-color 0.4s ease, color 0.4s ease;
   }
-  .lightning-card.is-alert .lightning-title{
-    color:var(--high);
+  .mini-status-tag span:last-child{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
   }
-  @keyframes lightning-pulse{
-    0%, 100% { box-shadow: 0 0 0 0 rgba(209, 77, 63, 0.0); }
-    50% { box-shadow: 0 0 0 4px rgba(209, 77, 63, 0.15); }
-  }
-  @media (prefers-reduced-motion: reduce){
-    .lightning-card.is-alert{ animation:none; }
+  .mini-status-dot{
+    width:6px; height:6px;
+    border-radius:50%;
+    background:var(--paper-dim);
+    flex-shrink:0;
+    transition: background 0.4s ease;
   }
 
-  .lightning-card.is-clear{
-    border-left-color:var(--low);
+  .mini-reading.is-alert .mini-reading-value{ color:var(--high); }
+  .mini-reading.is-alert .mini-status-tag{
+    background:var(--high-dim);
+    border-color:var(--high);
+    color:var(--high);
   }
-  .lightning-card.is-clear .lightning-icon{
-    opacity:0.5;
+  .mini-reading.is-alert .mini-status-dot{ background:var(--high); }
+  .mini-reading.is-alert{ animation: lightning-pulse 1.8s ease-in-out infinite; border-radius:10px; }
+  @keyframes lightning-pulse{
+    0%, 100% { box-shadow: 0 0 0 0 rgba(209, 77, 63, 0.0); }
+    50% { box-shadow: 0 0 0 4px rgba(209, 77, 63, 0.12); }
   }
+  @media (prefers-reduced-motion: reduce){
+    .mini-reading.is-alert{ animation:none; }
+  }
+
+  .mini-reading.is-clear .mini-reading-value{ color:var(--low); }
+  .mini-reading.is-clear .mini-status-tag{
+    background:var(--low-dim);
+    border-color:var(--low);
+    color:var(--low);
+  }
+  .mini-reading.is-clear .mini-status-dot{ background:var(--low); }
 
   .org-toggle{
     width:100%;
@@ -598,20 +606,22 @@
       </div>
     </div>
 
-    <div class="alert-row">
-      <div class="lightning-card" id="lightning-card">
-        <div class="lightning-icon" id="lightning-icon">⚡</div>
-        <div class="lightning-text">
-          <div class="lightning-title" id="lightning-title">Checking for lightning…</div>
-          <div class="lightning-sub" id="lightning-sub">—</div>
+    <div class="mini-reading-row">
+      <div class="mini-reading" id="lightning-card">
+        <div class="mini-reading-label">Lightning</div>
+        <div class="mini-reading-value" id="lightning-title">—</div>
+        <div class="mini-status-tag" id="lightning-tag">
+          <span class="mini-status-dot"></span>
+          <span id="lightning-sub">—</span>
         </div>
       </div>
 
-      <div class="lightning-card" id="psi-card">
-        <div class="lightning-icon" id="psi-icon">🌫️</div>
-        <div class="lightning-text">
-          <div class="lightning-title" id="psi-title">Checking air quality…</div>
-          <div class="lightning-sub" id="psi-sub">—</div>
+      <div class="mini-reading" id="psi-card">
+        <div class="mini-reading-label">Air Quality (PSI)</div>
+        <div class="mini-reading-value" id="psi-title">—</div>
+        <div class="mini-status-tag" id="psi-tag">
+          <span class="mini-status-dot"></span>
+          <span id="psi-sub">—</span>
         </div>
       </div>
     </div>
@@ -1476,30 +1486,29 @@
 
   function renderLightningState(state, detail){
     var card = document.getElementById("lightning-card");
-    var icon = document.getElementById("lightning-icon");
     var title = document.getElementById("lightning-title");
     var sub = document.getElementById("lightning-sub");
+    var tag = document.getElementById("lightning-tag");
 
     card.classList.remove("is-alert", "is-clear");
+    tag.removeAttribute("title");
 
     if(state === "alert"){
       card.classList.add("is-alert");
-      icon.textContent = "⚡";
-      title.textContent = "Lightning risk nearby";
-      sub.textContent = detail;
+      title.textContent = "Alert";
+      sub.textContent = "Risk nearby";
+      tag.title = detail;
     } else if(state === "clear"){
       card.classList.add("is-clear");
-      icon.textContent = "⚡";
-      title.textContent = "No lightning detected nearby";
-      sub.textContent = "Within " + LIGHTNING_RADIUS_KM + " km, last 30 min · NEA Lightning Observation";
+      title.textContent = "Clear";
+      sub.textContent = "None within " + LIGHTNING_RADIUS_KM + "km";
     } else if(state === "error"){
-      icon.textContent = "⚡";
-      title.textContent = "Lightning data unavailable";
-      sub.textContent = detail || "Couldn't load lightning data right now.";
+      title.textContent = "—";
+      sub.textContent = "Unavailable";
+      tag.title = detail || "Couldn't load lightning data right now.";
     } else {
-      icon.textContent = "⚡";
-      title.textContent = "Checking for lightning…";
-      sub.textContent = "—";
+      title.textContent = "—";
+      sub.textContent = "Checking…";
     }
   }
 
@@ -1535,33 +1544,31 @@
 
   function renderPSIState(state, value, detail){
     var card = document.getElementById("psi-card");
-    var icon = document.getElementById("psi-icon");
     var title = document.getElementById("psi-title");
     var sub = document.getElementById("psi-sub");
+    var tag = document.getElementById("psi-tag");
 
     card.classList.remove("is-alert", "is-clear");
+    tag.removeAttribute("title");
 
     if(state === "reading"){
       var band = classifyPSI(value);
       var g = PSI_GUIDANCE[band];
-      // Map PSI's 5 bands onto the app's existing 3-color accent
-      // system: good/moderate read as calm, unhealthy as a warning
-      // tone, very unhealthy/hazardous as a full alert — reusing
-      // is-alert/is-clear rather than inventing a separate 5-color
-      // scheme that wouldn't match the rest of the app.
       if(band === "veryUnhealthy" || band === "hazardous"){
         card.classList.add("is-alert");
       } else if(band === "good" || band === "moderate"){
         card.classList.add("is-clear");
       }
-      title.textContent = "PSI " + value + " — " + g.label;
-      sub.textContent = g.advice;
+      title.textContent = value;
+      sub.textContent = g.label;
+      tag.title = g.advice;
     } else if(state === "error"){
-      title.textContent = "Air quality data unavailable";
-      sub.textContent = detail || "Couldn't load PSI data right now.";
+      title.textContent = "—";
+      sub.textContent = "Unavailable";
+      tag.title = detail || "Couldn't load PSI data right now.";
     } else {
-      title.textContent = "Checking air quality…";
-      sub.textContent = "—";
+      title.textContent = "—";
+      sub.textContent = "Checking…";
     }
   }
 
