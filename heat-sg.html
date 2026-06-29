@@ -595,6 +595,14 @@
       </div>
     </div>
 
+    <div class="lightning-card" id="psi-card" style="margin-top:10px;">
+      <div class="lightning-icon" id="psi-icon">🌫️</div>
+      <div class="lightning-text">
+        <div class="lightning-title" id="psi-title">Checking air quality…</div>
+        <div class="lightning-sub" id="psi-sub">—</div>
+      </div>
+    </div>
+
     <div class="action-card">
       <div class="action-title" id="action-title">Training guidance</div>
       <div class="action-grid">
@@ -920,6 +928,10 @@
     return fetchProxy("lightning", dateParam);
   }
 
+  function fetchPSI(dateParam){
+    return fetchProxy("psi", dateParam);
+  }
+
   // Parsed against the REAL, CONFIRMED live response (verified by
   // fetching the actual API directly — not just the spec doc, which
   // had a typo: "longtitude" instead of "longitude". The live data
@@ -1042,6 +1054,70 @@
       })
       .filter(function(s){ return s.distanceKm <= radiusKm; })
       .sort(function(a, b){ return a.distanceKm - b.distanceKm; });
+  }
+
+  // Parses a PSI API response (confirmed against the real OpenAPI
+  // spec — this dataset has a structurally different shape from
+  // wbgt/lightning: regions + items, not per-record station readings).
+  // Returns { regions: [{name, lat, lon}], latest: {psi24h: {region: value}}, timestamp }
+  function parsePSI(json){
+    var data = json && json.data ? json.data : json;
+    var regionMeta = data.regionMetadata || [];
+    var items = data.items || [];
+    if(!items.length) throw new Error("No PSI readings were returned right now.");
+
+    var latest = items[items.length - 1];
+    var readings = latest.readings || {};
+    var psi24h = readings.psi_twenty_four_hourly || {};
+    // psi_twenty_four_hourly is NEA's official health-advisory metric
+    // (vs. psi_three_hourly, a supplementary near-term reading).
+
+    var regions = regionMeta.map(function(r){
+      var loc = r.labelLocation || {};
+      return { name: r.name, lat: Number(loc.latitude), lon: Number(loc.longitude) };
+    }).filter(function(r){ return !isNaN(r.lat) && !isNaN(r.lon); });
+
+    if(!regions.length) throw new Error("Couldn't parse PSI region locations from the response.");
+
+    var timestamp = latest.updatedTimestamp || latest.timestamp || null;
+    return { regions: regions, psi24h: psi24h, timestamp: timestamp };
+  }
+
+  function findNearestPSIRegion(parsed, lat, lon){
+    var best = null, bestDist = Infinity;
+    parsed.regions.forEach(function(r){
+      var d = haversine(lat, lon, r.lat, r.lon);
+      if(d < bestDist){ bestDist = d; best = r; }
+    });
+    if(!best) return null;
+    // Region keys in the readings object are lowercase (e.g. "east"),
+    // while regionMetadata names are capitalized (e.g. "East") — match
+    // case-insensitively.
+    var regionKey = Object.keys(parsed.psi24h).filter(function(k){
+      return k.toLowerCase() === best.name.toLowerCase();
+    })[0];
+    var value = regionKey ? parsed.psi24h[regionKey] : undefined;
+    return { region: best.name, value: Number(value), distanceKm: bestDist };
+  }
+
+  // PSI bands per NEA's published health advisory (corroborated
+  // across NEA/MOH consumer guidance): Good 0-50, Moderate 51-100,
+  // Unhealthy 101-200, Very Unhealthy 201-300, Hazardous >300.
+  var PSI_GUIDANCE = {
+    good: { label: "GOOD", max: 50, advice: "Air quality is good. Continue normal outdoor activity." },
+    moderate: { label: "MODERATE", max: 100, advice: "Air quality is acceptable. Sensitive groups (children, elderly, those with heart/lung conditions) may wish to reduce prolonged outdoor exertion." },
+    unhealthy: { label: "UNHEALTHY", max: 200, advice: "Reduce prolonged or strenuous outdoor exertion, especially for sensitive groups. Consider moving training indoors." },
+    veryUnhealthy: { label: "VERY UNHEALTHY", max: 300, advice: "Minimise outdoor exertion. Sensitive groups should avoid outdoor activity entirely." },
+    hazardous: { label: "HAZARDOUS", max: Infinity, advice: "Avoid outdoor exertion. Stay indoors with windows closed where possible." }
+  };
+
+  function classifyPSI(value){
+    if(isNaN(value)) return null;
+    if(value <= 50) return "good";
+    if(value <= 100) return "moderate";
+    if(value <= 200) return "unhealthy";
+    if(value <= 300) return "veryUnhealthy";
+    return "hazardous";
   }
 
   function classify(value, flag){
@@ -1219,6 +1295,7 @@
         els["loading-text"].textContent = "Checking nearest WBGT station";
         loadNearestAEDs(loc.lat, loc.lon); // fires independently — AED card updates whenever it's ready, doesn't block the main reading
         loadLightningStatus(loc.lat, loc.lon); // same — independent of the main WBGT flow
+        loadPSIStatus(loc.lat, loc.lon); // same — independent of the main WBGT flow
         return fetchWBGT().then(function(json){ return {loc:loc, json:json}; });
       })
       .then(function(bundle){
@@ -1440,6 +1517,55 @@
       })
       .catch(function(err){
         renderLightningState("error", err.message);
+      });
+  }
+
+  function renderPSIState(state, value, detail){
+    var card = document.getElementById("psi-card");
+    var icon = document.getElementById("psi-icon");
+    var title = document.getElementById("psi-title");
+    var sub = document.getElementById("psi-sub");
+
+    card.classList.remove("is-alert", "is-clear");
+
+    if(state === "reading"){
+      var band = classifyPSI(value);
+      var g = PSI_GUIDANCE[band];
+      // Map PSI's 5 bands onto the app's existing 3-color accent
+      // system: good/moderate read as calm, unhealthy as a warning
+      // tone, very unhealthy/hazardous as a full alert — reusing
+      // is-alert/is-clear rather than inventing a separate 5-color
+      // scheme that wouldn't match the rest of the app.
+      if(band === "veryUnhealthy" || band === "hazardous"){
+        card.classList.add("is-alert");
+      } else if(band === "good" || band === "moderate"){
+        card.classList.add("is-clear");
+      }
+      title.textContent = "PSI " + value + " — " + g.label;
+      sub.textContent = g.advice;
+    } else if(state === "error"){
+      title.textContent = "Air quality data unavailable";
+      sub.textContent = detail || "Couldn't load PSI data right now.";
+    } else {
+      title.textContent = "Checking air quality…";
+      sub.textContent = "—";
+    }
+  }
+
+  function loadPSIStatus(lat, lon){
+    renderPSIState("loading");
+    fetchPSI()
+      .then(function(json){
+        var parsed = parsePSI(json);
+        var nearest = findNearestPSIRegion(parsed, lat, lon);
+        if(!nearest || isNaN(nearest.value)){
+          renderPSIState("error", "Couldn't match a PSI reading to your location.");
+          return;
+        }
+        renderPSIState("reading", nearest.value);
+      })
+      .catch(function(err){
+        renderPSIState("error", err.message);
       });
   }
 
