@@ -265,6 +265,7 @@ h1,h2,h3,.num,.label-cond{font-family:'Barlow Condensed',sans-serif;}
 .timeline-card .bar.low{background:var(--low);}
 .timeline-card .bar.mod{background:var(--mod);}
 .timeline-card .bar.high{background:var(--high);}
+.timeline-card .bar.now{outline:2px solid var(--paper); outline-offset:1px;}
 .timeline-empty{font-size:12px; color:var(--paper-dim); padding:20px 0; text-align:center;}
 
 /* ---------- Buttons row ---------- */
@@ -757,28 +758,29 @@ function parseStations(json){
 }
 
 function extractStationHistory(json, stationId){
-  var points = [];
   var data = json && json.data ? json.data : json;
   var records = data.records || [];
-  records.forEach(function(rec){
-    var readings = (rec.item && rec.item.readings) || [];
-    var match = readings.find(function(r){ return r.station && r.station.id === stationId; });
+  var points = [];
+
+  records.forEach(function(record){
+    var readings = (record.item && record.item.readings) || [];
+    var match = readings.filter(function(r){
+      return r.station && r.station.id === stationId;
+    })[0];
     if(!match) return;
-    var wbgtNum = Number(match.wbgt);
-    if(isNaN(wbgtNum)) return;
+    var value = Number(match.wbgt);
+    if(isNaN(value)) return;
     // Per-day (?date=) records carry "datetime"; the single latest-reading
     // response carries "updatedTimestamp" — check both, datetime first,
     // since this function only ever runs against the ?date= response.
-    var timeStr = rec.datetime || rec.updatedTimestamp || rec.timestamp;
-    var t = timeStr ? Date.parse(timeStr) : NaN;
-    if(isNaN(t)) return; // drop points we can't place in time — can't sort or window them otherwise
-    points.push({ time: timeStr, t: t, wbgt: wbgtNum, level: classify(wbgtNum, match.heatStress) });
+    var timeStr = record.datetime || record.updatedTimestamp;
+    var time = timeStr ? new Date(timeStr) : null;
+    if(!time || isNaN(time.getTime())) return;
+    points.push({ time: time, value: value, flag: match.heatStress });
   });
 
-  points.sort(function(a, b){ return a.t - b.t; }); // oldest to newest, left-to-right on the chart
-
-  var cutoff = Date.now() - 3*60*60*1000;
-  return points.filter(function(p){ return p.t >= cutoff; });
+  points.sort(function(a, b){ return a.time - b.time; }); // oldest to newest, left-to-right on the chart
+  return points;
 }
 
 function parseLightning(json){
@@ -923,20 +925,41 @@ function renderResult(station, distanceKm, timestamp, history){
   renderTimeline(history, station.level);
 }
 
-function renderTimeline(points, currentLevel){
+function renderTimeline(historyPoints, currentLevel){
   var wrap = document.getElementById('timelineBars');
   wrap.innerHTML = '';
-  if(!points || !points.length){
-    wrap.innerHTML = '<div class="timeline-empty">No historical readings yet for this station today.</div>';
+
+  if(!historyPoints || !historyPoints.length){
+    // No history available yet (e.g. first reading of the day, or the
+    // history fetch failed) — show just the current reading rather
+    // than fabricating data.
+    var bar = document.createElement('div');
+    bar.className = 'bar now';
+    bar.style.height = '60%';
+    bar.style.background = 'var(--' + currentLevel + ')';
+    wrap.appendChild(bar);
     return;
   }
-  var maxVal = Math.max.apply(null, points.map(function(p){ return isNaN(p.wbgt) ? 0 : p.wbgt; }).concat([33]));
-  points.forEach(function(p){
+
+  var now = new Date();
+  var threeHoursAgo = new Date(now.getTime() - 3*60*60*1000);
+  var recent = historyPoints.filter(function(p){ return p.time >= threeHoursAgo; });
+  if(!recent.length) recent = historyPoints.slice(-12); // fallback: last N points if none fall in window
+
+  var values = recent.map(function(p){ return p.value; });
+  var minV = Math.min.apply(null, values);
+  var maxV = Math.max.apply(null, values);
+  var range = Math.max(0.5, maxV - minV); // avoid a flat line collapsing to 0 height
+
+  recent.forEach(function(p, i){
+    var level = classify(p.value, p.flag);
+    var isLast = i === recent.length - 1;
     var bar = document.createElement('div');
-    var pct = isNaN(p.wbgt) ? 4 : Math.max(6, (p.wbgt / maxVal) * 100);
-    bar.className = 'bar ' + (p.level || currentLevel);
+    bar.className = 'bar' + (isLast ? ' now' : '');
+    var pct = 25 + ((p.value - minV) / range) * 70; // 25–95% height range, keeps short bars visible
     bar.style.height = pct + '%';
-    bar.title = (isNaN(p.wbgt) ? '—' : p.wbgt.toFixed(1)) + '°C';
+    bar.style.background = isLast ? 'var(--' + level + ')' : 'var(--' + level + '-dim)';
+    bar.title = p.time.toLocaleTimeString('en-SG', {hour:'2-digit', minute:'2-digit'}) + ' — ' + p.value.toFixed(1) + '°C';
     wrap.appendChild(bar);
   });
 }
