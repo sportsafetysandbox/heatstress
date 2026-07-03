@@ -172,13 +172,13 @@ h1,h2,h3,.num,.label-cond{font-family:'Barlow Condensed',sans-serif;}
 .mini-row{display:flex; gap:10px; margin-bottom:22px;}
 .mini-card{
   flex:1; background:var(--bg-raised); border:1px solid var(--line); border-radius:12px;
-  padding:12px 14px;
+  padding:14px; text-align:center;
 }
-.mini-label{font-size:10px; letter-spacing:1px; color:var(--paper-dim); text-transform:uppercase; font-weight:600; display:flex; align-items:center; gap:5px;}
-.mini-value{font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:700; margin-top:4px;}
+.mini-label{font-size:10px; letter-spacing:1px; color:var(--paper-dim); text-transform:uppercase; font-weight:600; display:flex; align-items:center; justify-content:center; gap:5px;}
+.mini-value{font-family:'Barlow Condensed',sans-serif; font-size:36px; font-weight:700; margin-top:6px; line-height:1;}
 .mini-value.alert{color:var(--high);}
 .mini-value.clear{color:var(--low);}
-.mini-sub{font-size:11px; color:var(--paper-dim); margin-top:2px;}
+.mini-sub{font-size:11px; color:var(--paper-dim); margin-top:4px;}
 
 /* ---------- Cards (generic) ---------- */
 .card{
@@ -941,10 +941,12 @@ function renderTimeline(historyPoints, currentLevel){
     return;
   }
 
-  var now = new Date();
-  var threeHoursAgo = new Date(now.getTime() - 3*60*60*1000);
-  var recent = historyPoints.filter(function(p){ return p.time >= threeHoursAgo; });
-  if(!recent.length) recent = historyPoints.slice(-12); // fallback: last N points if none fall in window
+  // WBGT updates every 15 min -> 4 readings/hour -> 12 readings across
+  // 3 hours. Take the last 12 points by count rather than filtering on
+  // a rolling time window, so a brief gap in NEA's data doesn't leave
+  // the chart looking sparser than it should.
+  var BARS_FOR_3H = 12;
+  var recent = historyPoints.slice(-BARS_FOR_3H);
 
   var values = recent.map(function(p){ return p.value; });
   var minV = Math.min.apply(null, values);
