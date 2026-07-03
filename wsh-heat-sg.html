@@ -179,6 +179,13 @@ h1,h2,h3,.num,.label-cond{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-seri
 .mini-value.alert{color:var(--high);}
 .mini-value.clear{color:var(--low);}
 .mini-sub{font-size:11px; color:var(--paper-dim); margin-top:4px;}
+.mini-advice{
+  font-size:11px; line-height:1.4; margin-top:8px; padding-top:8px;
+  border-top:1px dashed var(--line); color:var(--paper-dim); display:none;
+}
+.mini-advice.show{display:block;}
+.mini-advice.alert{color:var(--high);}
+.mini-advice.caution{color:var(--mod);}
 
 /* ---------- Cards (generic) ---------- */
 .card{
@@ -375,11 +382,13 @@ h1,h2,h3,.num,.label-cond{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-seri
         <div class="mini-label">⚡ Lightning</div>
         <div class="mini-value" id="lightningValue">…</div>
         <div class="mini-sub" id="lightningSub">Checking nearby strikes</div>
+        <div class="mini-advice" id="lightningAdvice"></div>
       </div>
       <div class="mini-card">
         <div class="mini-label">🌫️ Air Quality (PSI)</div>
         <div class="mini-value" id="psiValue">…</div>
         <div class="mini-sub" id="psiSub">24-hr regional reading</div>
+        <div class="mini-advice" id="psiAdvice"></div>
       </div>
     </div>
 
@@ -602,12 +611,16 @@ var VULNERABLE_WORKERS = [
 ];
 
 var PSI_BANDS = [
-  { max:50,  name:"Good" },
-  { max:100, name:"Moderate" },
-  { max:200, name:"Unhealthy" },
-  { max:300, name:"Very Unhealthy" },
-  { max:Infinity, name:"Hazardous" }
+  { max:50,  name:"Good",           tier:"clear",   advice:"Air quality is good. Continue normal outdoor work." },
+  { max:100, name:"Moderate",       tier:"clear",   advice:"Air quality is acceptable. Workers with heart or lung conditions may wish to reduce prolonged exertion." },
+  { max:200, name:"Unhealthy",      tier:"caution", advice:"Reduce prolonged or strenuous outdoor exertion, especially for vulnerable workers. Consider rescheduling heavy work." },
+  { max:300, name:"Very Unhealthy", tier:"alert",   advice:"Minimise outdoor exertion. Vulnerable workers should avoid outdoor work entirely." },
+  { max:Infinity, name:"Hazardous", tier:"alert",   advice:"Avoid outdoor exertion. Move work indoors with windows closed where possible." }
 ];
+
+// NEA: most lightning strokes occur within 5-6km of a thunderstorm cell —
+// same rationale as the LIGHTNING_RADIUS_KM alert radius above.
+var LIGHTNING_ADVICE = "Stop outdoor work and move workers to a safe shelter immediately. Do not resume until 30 minutes after the last strike within range.";
 
 /* ============================================================
    STATE
@@ -893,9 +906,9 @@ function classify(value, flag){
 }
 function classifyPSI(value){
   for(var i=0;i<PSI_BANDS.length;i++){
-    if(value <= PSI_BANDS[i].max) return PSI_BANDS[i].name;
+    if(value <= PSI_BANDS[i].max) return PSI_BANDS[i];
   }
-  return "—";
+  return null;
 }
 
 /* ============================================================
@@ -1012,17 +1025,37 @@ function escapeHtml(str){
 function renderLightningState(state, detail){
   var val = document.getElementById('lightningValue');
   var sub = document.getElementById('lightningSub');
+  var advice = document.getElementById('lightningAdvice');
   val.classList.remove('alert','clear');
+  advice.classList.remove('show','alert','caution');
+  advice.textContent = '';
+
   if(state === 'loading'){ val.textContent='…'; sub.textContent='Checking nearby strikes'; }
-  else if(state === 'alert'){ val.textContent='Alert'; val.classList.add('alert'); sub.textContent=detail || 'Strikes within 6km'; }
+  else if(state === 'alert'){
+    val.textContent='Alert'; val.classList.add('alert');
+    sub.textContent = detail || 'Strikes within 6km';
+    advice.textContent = LIGHTNING_ADVICE;
+    advice.classList.add('show','alert');
+  }
   else if(state === 'clear'){ val.textContent='Clear'; val.classList.add('clear'); sub.textContent=detail || 'No strikes within 6km'; }
   else { val.textContent='—'; sub.textContent='Unavailable'; }
 }
-function renderPSIState(state, value, detail){
+function renderPSIState(state, value, band, regionName){
   var val = document.getElementById('psiValue');
   var sub = document.getElementById('psiSub');
+  var advice = document.getElementById('psiAdvice');
+  advice.classList.remove('show','alert','caution');
+  advice.textContent = '';
+
   if(state === 'loading'){ val.textContent='…'; sub.textContent='Fetching reading'; }
-  else if(state === 'reading'){ val.textContent=value; sub.textContent=detail; }
+  else if(state === 'reading'){
+    val.textContent = value;
+    sub.textContent = (band ? band.name : '—') + (regionName ? ' · ' + capitalize(regionName) : '');
+    if(band && band.tier !== 'clear'){
+      advice.textContent = band.advice;
+      advice.classList.add('show', band.tier); // 'caution' or 'alert'
+    }
+  }
   else { val.textContent='—'; sub.textContent='Unavailable'; }
 }
 
@@ -1051,7 +1084,7 @@ async function loadPSIStatus(lat, lon){
     if(!region){ renderPSIState('error'); return; }
     var value = parsed.psi24h[region.name];
     if(typeof value !== 'number'){ renderPSIState('error'); return; }
-    renderPSIState('reading', value, classifyPSI(value) + ' · ' + capitalize(region.name));
+    renderPSIState('reading', value, classifyPSI(value), region.name);
   }catch(e){
     renderPSIState('error');
   }
