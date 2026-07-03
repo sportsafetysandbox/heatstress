@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEAT/SG — ActiveSG Sport Centres Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SPORT SINGAPORE BRAND PALETTE
+   Primary red:   #E31837  (SportSG logo red)
+   Navy:          #1A2233  (dark base — adapted from SSG navy)
+   White:         #FFFFFF
+   Light grey:    #F5F5F5
+   ============================================================ */
+:root{
+  /* Base — ash grey light mode */
+  --bg:           #B2B6BC;   /* ash grey — page background */
+  --bg-panel:     #8A8F97;   /* darker ash — header/panel */
+  --bg-card:      #F2F3F4;   /* near-white card surface */
+  --bg-card-alt:  #E5E7E9;   /* slightly deeper — data bar */
+
+  /* Text — dark on light */
+  --white:        #1A1D22;   /* primary text — dark charcoal */
+  --text-dim:     #4A5060;   /* secondary text */
+  --text-dimmer:  #7A8090;   /* tertiary text */
+  --line:         #C9CDD2;   /* borders */
+
+  /* SportSG brand */
+  --ssg-red:      #E31837;
+  --ssg-red-dim:  #FDEAED;   /* light red tint for light bg */
+
+  /* Status colours — adjusted for light background */
+  --safe:         #15803D;   /* deep green — readable on light */
+  --safe-dim:     #DCFCE7;   /* pale green fill */
+  --caution:      #B45309;   /* deep amber */
+  --caution-dim:  #FEF3C7;   /* pale amber fill */
+  --danger:       #B91C1C;   /* deep red */
+  --danger-dim:   #FEE2E2;   /* pale red fill */
+
+  /* Zone header accent */
+  --zone-border:  #E31837;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  background:var(--bg);
+  color:var(--white);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---- HEADER ---- */
+.header{
+  background:var(--ssg-red);
+  border-bottom:3px solid #B01228;
+  padding:0 28px;
+}
+.header-inner{
+  max-width:1600px;
+  margin:0 auto;
+  display:flex;
+  align-items:stretch;
+  justify-content:space-between;
+  min-height:64px;
+  gap:20px;
+}
+.brand-block{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:12px 0;
+}
+.brand-bar{
+  width:4px;
+  height:36px;
+  background:rgba(255,255,255,0.5);
+  border-radius:2px;
+}
+.brand-text{}
+.brand-main{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:800;
+  font-size:20px;
+  letter-spacing:0.08em;
+  color:#fff;
+  line-height:1;
+}
+.brand-sub{
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.7);
+  margin-top:3px;
+}
+.header-right{
+  display:flex;
+  align-items:center;
+  gap:24px;
+}
+.legend{
+  display:flex;
+  gap:16px;
+}
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:11px;
+  color:rgba(255,255,255,0.8);
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+}
+.legend-dot{
+  width:9px;height:9px;border-radius:50%;flex-shrink:0;
+}
+.clock-block{
+  text-align:right;
+  border-left:1px solid rgba(255,255,255,0.25);
+  padding-left:20px;
+}
+.clock-date{
+  font-size:10px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.7);
+}
+.clock-time{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:600;
+  font-size:16px;
+  color:#fff;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:0.04em;
+}
+
+/* ---- DATA BAR ---- */
+.data-bar{
+  background:var(--bg-card-alt);
+  border-bottom:1px solid var(--line);
+  padding:0 28px;
+}
+.data-bar-inner{
+  max-width:1600px;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  gap:0;
+  height:36px;
+  overflow-x:auto;
+}
+.data-pill{
+  font-size:11px;
+  color:var(--text-dim);
+  padding:0 18px;
+  height:100%;
+  display:flex;
+  align-items:center;
+  border-right:1px solid var(--line);
+  white-space:nowrap;
+  letter-spacing:0.02em;
+}
+.data-pill:first-child{ border-left:1px solid var(--line); }
+.data-pill span{ color:var(--white); font-weight:600; margin-left:5px; }
+.status-pill{
+  margin-left:auto;
+  font-size:11px;
+  color:var(--text-dim);
+  font-style:italic;
+  padding-left:16px;
+  white-space:nowrap;
+}
+
+/* ---- DASHBOARD BODY ---- */
+.body{
+  max-width:1600px;
+  margin:0 auto;
+  padding:24px 28px 48px;
+}
+
+/* ---- ZONE ---- */
+.zone{ margin-bottom:28px; }
+.zone-header{
+  display:flex;
+  align-items:center;
+  gap:0;
+  margin-bottom:14px;
+}
+.zone-label-block{
+  display:flex;
+  align-items:center;
+  gap:0;
+  background:var(--ssg-red);
+  border-radius:3px 0 0 3px;
+  overflow:hidden;
+}
+.zone-icon{
+  background:rgba(0,0,0,0.25);
+  padding:5px 10px;
+  font-size:11px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.7);
+  font-weight:600;
+}
+.zone-name{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:13px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:#fff;
+  padding:5px 14px 5px 10px;
+}
+.zone-count{
+  font-size:10px;
+  color:var(--text-dim);
+  margin-left:10px;
+  font-weight:600;
+  letter-spacing:0.06em;
+}
+.zone-line{
+  flex:1;
+  height:1px;
+  background:var(--line);
+  margin-left:0;
+}
+
+/* ---- GRID ---- */
+.zone-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+  gap:12px;
+}
+
+/* ---- CENTRE CARD ---- */
+.centre-card{
+  background:var(--bg-card);
+  border:1px solid var(--line);
+  border-top:3px solid var(--text-dimmer);
+  border-radius:6px;
+  overflow:hidden;
+  transition:border-top-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease;
+}
+.centre-card.st-safe{
+  border-top-color:var(--safe);
+}
+.centre-card.st-caution{
+  border-top-color:var(--caution);
+  background:color-mix(in srgb, var(--caution-dim) 30%, var(--bg-card));
+}
+.centre-card.st-danger{
+  border-top-color:var(--danger);
+  background:color-mix(in srgb, var(--danger-dim) 40%, var(--bg-card));
+  box-shadow:0 0 0 1px var(--danger-dim);
+  animation:danger-pulse 2.5s ease-in-out infinite;
+}
+@keyframes danger-pulse{
+  0%,100%{ box-shadow:0 0 0 0 rgba(239,68,68,0); }
+  50%{ box-shadow:0 0 0 4px rgba(239,68,68,0.1); }
+}
+@media(prefers-reduced-motion:reduce){
+  .centre-card.st-danger{ animation:none; }
+}
+.centre-card.st-loading{ opacity:0.45; }
+
+/* Card header */
+.card-head{
+  padding:11px 14px 9px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:8px;
+}
+.centre-name{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:15px;
+  letter-spacing:0.02em;
+  color:var(--white);
+  line-height:1.2;
+}
+.card-status-badge{
+  flex-shrink:0;
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  padding:3px 8px;
+  border-radius:3px;
+  background:var(--bg-card-alt);
+  color:var(--text-dim);
+  border:1px solid var(--line);
+  transition:background 0.4s, color 0.4s, border-color 0.4s;
+  white-space:nowrap;
+}
+.st-safe .card-status-badge{ background:var(--safe-dim); color:var(--safe); border-color:var(--safe); }
+.st-caution .card-status-badge{ background:var(--caution-dim); color:var(--caution); border-color:var(--caution); }
+.st-danger .card-status-badge{ background:var(--danger-dim); color:var(--danger); border-color:var(--danger); }
+
+/* Metrics row */
+.card-metrics{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  border-bottom:1px solid var(--line);
+}
+.metric{
+  padding:10px 12px;
+  text-align:center;
+  position:relative;
+}
+.metric+.metric{ border-left:1px solid var(--line); }
+.metric-label{
+  font-size:9px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-dimmer);
+  margin-bottom:4px;
+  font-weight:600;
+}
+.metric-value{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:800;
+  font-size:24px;
+  line-height:1;
+  color:var(--white);
+  transition:color 0.4s;
+}
+.metric-value.safe  { color:var(--safe); }
+.metric-value.caution{ color:var(--caution); }
+.metric-value.danger { color:var(--danger); }
+.metric-badge{
+  font-size:9px;
+  font-weight:600;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  margin-top:3px;
+  display:block;
+  line-height:1.3;
+}
+.metric-badge.safe  { color:var(--safe); }
+.metric-badge.caution{ color:var(--caution); }
+.metric-badge.danger { color:var(--danger); }
+
+/* WBGT Station row */
+.card-station{
+  padding:7px 12px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+}
+.station-info{
+  font-size:10px;
+  color:var(--text-dim);
+  line-height:1.3;
+}
+.station-name{
+  color:var(--white);
+  font-weight:600;
+}
+.station-dist{
+  font-size:9px;
+  color:var(--text-dimmer);
+}
+
+/* Mini timeline */
+.card-timeline{
+  padding:8px 12px;
+  display:flex;
+  align-items:flex-end;
+  gap:3px;
+  height:44px;
+}
+.tl-bar{
+  flex:1;
+  border-radius:2px 2px 0 0;
+  min-height:4px;
+  background:var(--line);
+  transition:height 0.6s ease;
+}
+.tl-bar.tl-safe    { background:var(--safe-dim); }
+.tl-bar.tl-caution { background:var(--caution-dim); }
+.tl-bar.tl-danger  { background:var(--danger-dim); }
+.tl-bar.tl-now.tl-safe    { background:var(--safe); }
+.tl-bar.tl-now.tl-caution { background:var(--caution); }
+.tl-bar.tl-now.tl-danger  { background:var(--danger); }
+.tl-label{
+  font-size:9px;
+  color:var(--text-dimmer);
+  white-space:nowrap;
+  padding-left:6px;
+  flex-shrink:0;
+  align-self:center;
+}
+
+/* Card footer */
+.card-foot{
+  padding:5px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:9px;
+  color:var(--text-dimmer);
+  letter-spacing:0.04em;
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<div class="header">
+  <div class="header-inner">
+    <div class="brand-block">
+      <div class="brand-bar"></div>
+      <div class="brand-text">
+        <div class="brand-main">HEAT/SG</div>
+        <div class="brand-sub">ActiveSG Sport Centres · Heat Stress Dashboard</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--safe)"></div>Low / Clear</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--caution)"></div>Moderate</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>High / Alert</div>
+      </div>
+      <div class="clock-block">
+        <div class="clock-date" id="clock-date">—</div>
+        <div class="clock-time" id="clock-time">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DATA BAR ============ -->
+<div class="data-bar">
+  <div class="data-bar-inner">
+    <div class="data-pill">WBGT Stations <span id="pill-wbgt">—</span></div>
+    <div class="data-pill">Lightning (30 min) <span id="pill-lightning">—</span></div>
+    <div class="data-pill">PSI <span id="pill-psi">—</span></div>
+    <div class="data-pill">Last refresh <span id="pill-refresh">—</span></div>
+    <div class="status-pill" id="status-msg">Loading…</div>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD BODY ============ -->
+<div class="body">
+
+  <div class="zone">
+    <div class="zone-header">
+      <div class="zone-label-block">
+        <div class="zone-icon">Zone</div>
+        <div class="zone-name">North</div>
+      </div>
+      <span class="zone-count" id="count-north"></span>
+      <div class="zone-line"></div>
+    </div>
+    <div class="zone-grid" id="grid-north"></div>
+  </div>
+
+  <div class="zone">
+    <div class="zone-header">
+      <div class="zone-label-block">
+        <div class="zone-icon">Zone</div>
+        <div class="zone-name">Northeast</div>
+      </div>
+      <span class="zone-count" id="count-northeast"></span>
+      <div class="zone-line"></div>
+    </div>
+    <div class="zone-grid" id="grid-northeast"></div>
+  </div>
+
+  <div class="zone">
+    <div class="zone-header">
+      <div class="zone-label-block">
+        <div class="zone-icon">Zone</div>
+        <div class="zone-name">West</div>
+      </div>
+      <span class="zone-count" id="count-west"></span>
+      <div class="zone-line"></div>
+    </div>
+    <div class="zone-grid" id="grid-west"></div>
+  </div>
+
+  <div class="zone">
+    <div class="zone-header">
+      <div class="zone-label-block">
+        <div class="zone-icon">Zone</div>
+        <div class="zone-name">Central</div>
+      </div>
+      <span class="zone-count" id="count-central"></span>
+      <div class="zone-line"></div>
+    </div>
+    <div class="zone-grid" id="grid-central"></div>
+  </div>
+
+  <div class="zone">
+    <div class="zone-header">
+      <div class="zone-label-block">
+        <div class="zone-icon">Zone</div>
+        <div class="zone-name">East</div>
+      </div>
+      <span class="zone-count" id="count-east"></span>
+      <div class="zone-line"></div>
+    </div>
+    <div class="zone-grid" id="grid-east"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+var PROXY = "https://wbgt-proxy.ryhanhusainni.workers.dev/";
+var REFRESH_MS = 5 * 60 * 1000;
+var LIGHTNING_REFRESH_MS = 2 * 60 * 1000;
+var LIGHTNING_RADIUS_KM = 6;
+
+// 22 ActiveSG Sport Centres — coordinates verified via Google Places
+var ZONES = {
+  north: [
+    { id:"yishun",        name:"Yishun",         lat:1.4121111, lon:103.8313335 },
+    { id:"bukitcanberra", name:"Bukit Canberra",  lat:1.4488728, lon:103.8239457 },
+    { id:"woodlands",     name:"Woodlands",       lat:1.434104,  lon:103.779798  },
+    { id:"yiochukang",    name:"Yio Chu Kang",    lat:1.3822319, lon:103.845925  },
+  ],
+  northeast: [
+    { id:"bishan",    name:"Bishan",     lat:1.3555048, lon:103.8509503 },
+    { id:"hougang",   name:"Hougang",    lat:1.3706138, lon:103.8885266 },
+    { id:"sengkang",  name:"Sengkang",   lat:1.3967848, lon:103.886901  },
+    { id:"serangoon", name:"Serangoon",  lat:1.3570514, lon:103.8746748 },
+    { id:"punggol",   name:"Punggol",    lat:1.4084829, lon:103.9067354 },
+  ],
+  west: [
+    { id:"bukitgombak", name:"Bukit Gombak",  lat:1.359667,  lon:103.752228  },
+    { id:"cck",         name:"Choa Chu Kang", lat:1.3910172, lon:103.7482599 },
+    { id:"jurongeast",  name:"Jurong East",   lat:1.346998,  lon:103.729109  },
+    { id:"jurongwest",  name:"Jurong West",   lat:1.3378059, lon:103.6941925 },
+  ],
+  central: [
+    { id:"delta",     name:"Delta",        lat:1.2891624, lon:103.8200350 },
+    { id:"queenstown",name:"Queenstown",   lat:1.2969489, lon:103.8028823 },
+    { id:"clementi",  name:"Clementi",     lat:1.3110740, lon:103.765017  },
+    { id:"jalanbesar",name:"Jalan Besar",  lat:1.3104768, lon:103.8595381 },
+    { id:"toapayoh",  name:"Toa Payoh",    lat:1.3376708, lon:103.8448689 },
+  ],
+  east: [
+    { id:"bedok",    name:"Heartbeat @ Bedok", lat:1.3269164, lon:103.9321636 },
+    { id:"kallang",  name:"Kallang",           lat:1.3054235, lon:103.8795557 },
+    { id:"pasirris", name:"Pasir Ris",         lat:1.3740237, lon:103.9514946 },
+    { id:"tampines", name:"Tampines",          lat:1.3536977, lon:103.9407675 },
+  ]
+};
+
+// ---------- CLOCK ----------
+function tickClock(){
+  var d=new Date();
+  document.getElementById("clock-date").textContent=
+    d.toLocaleDateString("en-SG",{weekday:"short",day:"numeric",month:"short"});
+  document.getElementById("clock-time").textContent=
+    d.toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit"})+" SGT";
+}
+tickClock(); setInterval(tickClock,30000);
+
+// ---------- UTILS ----------
+function haversine(la1,lo1,la2,lo2){
+  var R=6371,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+  var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function distLabel(km){
+  return km<1?Math.round(km*1000)+" m":km.toFixed(1)+" km";
+}
+function timeAgo(iso){
+  if(!iso) return "—";
+  var m=Math.round((Date.now()-new Date(iso))/60000);
+  return m<=0?"just now":m===1?"1 min ago":m<60?m+" min ago":Math.round(m/60)+"h ago";
+}
+function classifyWBGT(v,flag){
+  if(flag){ var f=flag.toLowerCase(); if(f.indexOf("high")>-1)return"danger"; if(f.indexOf("mod")>-1)return"caution"; if(f.indexOf("low")>-1)return"safe"; }
+  if(isNaN(v)) return null;
+  return v>=33?"danger":v>=31?"caution":"safe";
+}
+function classifyPSI(v){
+  if(isNaN(v)) return null;
+  return v>200?"danger":v>100?"caution":"safe";
+}
+function worstOf(levels){
+  if(levels.indexOf("danger")>-1) return"danger";
+  if(levels.indexOf("caution")>-1) return"caution";
+  if(levels.indexOf("safe")>-1) return"safe";
+  return null;
+}
+
+// ---------- FETCH ----------
+function fetchProxy(api,date){
+  var url=PROXY+"?api="+encodeURIComponent(api);
+  if(date) url+="&date="+encodeURIComponent(date);
+  return fetch(url).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});
+}
+function todayStr(){
+  var d=new Date();
+  return d.getFullYear()+"-"+(String(d.getMonth()+1).padStart(2,"0"))+"-"+(String(d.getDate()).padStart(2,"0"));
+}
+
+// ---------- PARSE WBGT STATIONS (latest snapshot) ----------
+function parseWBGTLatest(json){
+  var recs=(json&&json.data&&json.data.records)||[];
+  if(!recs.length) return [];
+  var latest=recs[recs.length-1];
+  return ((latest.item&&latest.item.readings)||[]).map(function(r){
+    var loc=r.location||{};
+    return {
+      id:r.station&&r.station.id,
+      name:r.station&&r.station.name,
+      lat:Number(loc.latitude), lon:Number(loc.longitude),
+      value:Number(r.wbgt), flag:r.heatStress,
+      timestamp:latest.updatedTimestamp||latest.datetime
+    };
+  }).filter(function(s){return !isNaN(s.lat)&&!isNaN(s.lon)&&!isNaN(s.value);});
+}
+
+// ---------- PARSE WBGT HISTORY (full day for timeline) ----------
+function parseWBGTHistory(json, stationId){
+  var recs=(json&&json.data&&json.data.records)||[];
+  var points=[];
+  recs.forEach(function(rec){
+    var readings=(rec.item&&rec.item.readings)||[];
+    var match=readings.filter(function(r){return r.station&&r.station.id===stationId;})[0];
+    if(!match) return;
+    var v=Number(match.wbgt); if(isNaN(v)) return;
+    var t=rec.datetime?new Date(rec.datetime):null; if(!t||isNaN(t)) return;
+    points.push({time:t, value:v, flag:match.heatStress});
+  });
+  points.sort(function(a,b){return a.time-b.time;});
+  return points;
+}
+
+function nearest(stations, lat, lon){
+  var best=null, bd=Infinity;
+  stations.forEach(function(s){ var d=haversine(lat,lon,s.lat,s.lon); if(d<bd){bd=d;best=s;} });
+  return best ? {station:best, distKm:bd} : null;
+}
+
+// ---------- PARSE LIGHTNING ----------
+function parseLightning(json){
+  var recs=(json&&json.data&&json.data.records)||[];
+  var strikes=[];
+  recs.forEach(function(rec){
+    ((rec.item&&rec.item.readings)||[]).forEach(function(r){
+      var loc=r.location||{},lat=Number(loc.latitude),lon=Number(loc.longitude);
+      if(isNaN(lat)||isNaN(lon)) return;
+      var t=r.datetime?new Date(r.datetime):null;
+      strikes.push({lat:lat,lon:lon,type:r.type,time:t});
+    });
+  });
+  return strikes;
+}
+function nearbyLightning(strikes,lat,lon){
+  var cutoff=new Date(Date.now()-30*60*1000);
+  return strikes.filter(function(s){return s.time&&s.time>=cutoff&&haversine(lat,lon,s.lat,s.lon)<=LIGHTNING_RADIUS_KM;});
+}
+
+// ---------- PARSE PSI ----------
+function parsePSI(json){
+  var data=(json&&json.data)||{};
+  var regionMeta=data.regionMetadata||[];
+  var items=data.items||[];
+  if(!items.length) return {regions:[],psi24h:{}};
+  var latest=items[items.length-1];
+  var psi24h=((latest.readings||{}).psi_twenty_four_hourly)||{};
+  var regions=regionMeta.map(function(r){
+    var loc=r.labelLocation||{};
+    return {name:r.name,lat:Number(loc.latitude),lon:Number(loc.longitude)};
+  }).filter(function(r){return !isNaN(r.lat)&&!isNaN(r.lon);});
+  return {regions:regions,psi24h:psi24h};
+}
+function nearestPSI(parsed,lat,lon){
+  var best=null,bd=Infinity;
+  parsed.regions.forEach(function(r){var d=haversine(lat,lon,r.lat,r.lon);if(d<bd){bd=d;best=r;}});
+  if(!best) return NaN;
+  var key=Object.keys(parsed.psi24h).filter(function(k){return k.toLowerCase()===best.name.toLowerCase();})[0];
+  return key?Number(parsed.psi24h[key]):NaN;
+}
+
+// ---------- BUILD CARD SHELLS ----------
+function buildCards(){
+  Object.keys(ZONES).forEach(function(zone){
+    var grid=document.getElementById("grid-"+zone);
+    var count=document.getElementById("count-"+zone);
+    if(count) count.textContent = ZONES[zone].length+" centres";
+    ZONES[zone].forEach(function(c){
+      var card=document.createElement("div");
+      card.className="centre-card st-loading";
+      card.id="card-"+c.id;
+      card.innerHTML=
+        '<div class="card-head">'+
+          '<div class="centre-name">'+c.name+'</div>'+
+          '<div class="card-status-badge" id="csb-'+c.id+'">Loading</div>'+
+        '</div>'+
+        '<div class="card-metrics">'+
+          '<div class="metric">'+
+            '<div class="metric-label">WBGT</div>'+
+            '<div class="metric-value" id="wv-'+c.id+'">—</div>'+
+            '<span class="metric-badge" id="wb-'+c.id+'">—</span>'+
+          '</div>'+
+          '<div class="metric">'+
+            '<div class="metric-label">Lightning</div>'+
+            '<div class="metric-value" id="lv-'+c.id+'">—</div>'+
+            '<span class="metric-badge" id="lb-'+c.id+'">—</span>'+
+          '</div>'+
+          '<div class="metric">'+
+            '<div class="metric-label">PSI</div>'+
+            '<div class="metric-value" id="pv-'+c.id+'">—</div>'+
+            '<span class="metric-badge" id="pb-'+c.id+'">—</span>'+
+          '</div>'+
+        '</div>'+
+        '<div class="card-station">'+
+          '<div class="station-info">'+
+            '<span style="font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dimmer);">WBGT Station · </span>'+
+            '<span class="station-name" id="sn-'+c.id+'">—</span> '+
+            '<span class="station-dist" id="sd-'+c.id+'"></span>'+
+          '</div>'+
+          '<div style="font-size:9px;color:var(--text-dimmer)" id="su-'+c.id+'">—</div>'+
+        '</div>'+
+        '<div class="card-timeline" id="tl-'+c.id+'">'+
+          '<span class="tl-label">3 hr</span>'+
+        '</div>'+
+        '<div class="card-foot">'+
+          '<span>Last 3 hours · WBGT</span>'+
+          '<span id="cf-'+c.id+'">—</span>'+
+        '</div>';
+      grid.appendChild(card);
+    });
+  });
+}
+
+// ---------- RENDER TIMELINE ----------
+function renderTimeline(centreId, historyPoints, currentLevel){
+  var tl=document.getElementById("tl-"+centreId);
+  if(!tl) return;
+  var now=new Date(), ago3=new Date(now-3*60*60*1000);
+  var recent=historyPoints.filter(function(p){return p.time>=ago3;});
+  if(!recent.length) recent=historyPoints.slice(-12);
+  tl.innerHTML='<span class="tl-label">3 hr</span>';
+  if(!recent.length){ var empty=document.createElement("div"); empty.className="tl-bar"; tl.appendChild(empty); return; }
+  var vals=recent.map(function(p){return p.value;});
+  var minV=Math.min.apply(null,vals), maxV=Math.max.apply(null,vals);
+  var range=Math.max(0.5,maxV-minV);
+  recent.forEach(function(p,i){
+    var lvl=classifyWBGT(p.value,p.flag)||currentLevel||"safe";
+    var isLast=i===recent.length-1;
+    var bar=document.createElement("div");
+    bar.className="tl-bar tl-"+lvl+(isLast?" tl-now":"");
+    bar.style.height=Math.max(8,25+((p.value-minV)/range)*65)+"%";
+    bar.title=p.time.toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit"})+" · "+p.value.toFixed(1)+"°C";
+    tl.appendChild(bar);
+  });
+}
+
+// ---------- RENDER CARD ----------
+function renderCard(centre, wbgt, lightningNearby, psiVal, history){
+  var card=document.getElementById("card-"+centre.id);
+  if(!card) return;
+
+  var wLevel=classifyWBGT(wbgt.value,wbgt.flag);
+  var lLevel=lightningNearby.length>0?"danger":"safe";
+  var pLevel=classifyPSI(psiVal);
+  var overall=worstOf([wLevel,lLevel,pLevel].filter(Boolean));
+
+  card.className="centre-card"+(overall?" st-"+overall:" st-loading");
+
+  var statusLabels={"safe":"Low","caution":"Moderate","danger":"High / Alert"};
+  var csb=document.getElementById("csb-"+centre.id);
+  if(csb) csb.textContent=overall?statusLabels[overall]:"No data";
+
+  // WBGT
+  var wv=document.getElementById("wv-"+centre.id), wb=document.getElementById("wb-"+centre.id);
+  if(wv){ wv.textContent=!isNaN(wbgt.value)?wbgt.value.toFixed(1)+"°":"—"; wv.className="metric-value"+(wLevel?" "+wLevel:""); }
+  var wLabels={"safe":"Low","caution":"Moderate","danger":"High"};
+  if(wb){ wb.textContent=wLevel?wLabels[wLevel]:"N/A"; wb.className="metric-badge"+(wLevel?" "+wLevel:""); }
+
+  // Lightning
+  var lv=document.getElementById("lv-"+centre.id), lb=document.getElementById("lb-"+centre.id);
+  var lAlert=lightningNearby.length>0;
+  if(lv){ lv.textContent=lAlert?"⚡ "+lightningNearby.length:"✓"; lv.className="metric-value"+(lAlert?" danger":" safe"); lv.style.fontSize="20px"; lv.style.lineHeight="1.3"; }
+  if(lb){ lb.textContent=lAlert?lightningNearby.length+" within 6km":"Clear"; lb.className="metric-badge"+(lAlert?" danger":" safe"); }
+
+  // PSI
+  var pv=document.getElementById("pv-"+centre.id), pb=document.getElementById("pb-"+centre.id);
+  var pLabels={"safe":"Good/Mod","caution":"Unhealthy","danger":"V. Unhealthy"};
+  if(pv){ pv.textContent=!isNaN(psiVal)?psiVal:"—"; pv.className="metric-value"+(pLevel?" "+pLevel:""); }
+  if(pb){ pb.textContent=pLevel?pLabels[pLevel]:"N/A"; pb.className="metric-badge"+(pLevel?" "+pLevel:""); }
+
+  // Station
+  var sn=document.getElementById("sn-"+centre.id);
+  var sd=document.getElementById("sd-"+centre.id);
+  var su=document.getElementById("su-"+centre.id);
+  if(sn) sn.textContent=wbgt.station?wbgt.station.name:"—";
+  if(sd) sd.textContent=wbgt.distKm!=null?"· "+distLabel(wbgt.distKm):"";
+  if(su) su.textContent=wbgt.timestamp?timeAgo(wbgt.timestamp):"—";
+
+  // Timeline
+  renderTimeline(centre.id, history||[], overall);
+
+  // Footer
+  var cf=document.getElementById("cf-"+centre.id);
+  if(cf) cf.textContent=wbgt.station?wbgt.station.name+" · "+distLabel(wbgt.distKm):"No station data";
+}
+
+// ---------- DATA STATE ----------
+var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}} };
+
+function updateAllCards(){
+  var allCentres=Object.values(ZONES).reduce(function(a,b){return a.concat(b);});
+  allCentres.forEach(function(c){
+    var wRes=null, bd=Infinity;
+    dataState.wbgtStations.forEach(function(s){var d=haversine(c.lat,c.lon,s.lat,s.lon);if(d<bd){bd=d;wRes={station:s,distKm:d};}});
+    var wbgtResult = wRes ? {value:wRes.station.value, flag:wRes.station.flag, station:wRes.station, distKm:wRes.distKm, timestamp:wRes.station.timestamp} : {value:NaN};
+    var lNearby=nearbyLightning(dataState.strikes,c.lat,c.lon);
+    var psiVal=nearestPSI(dataState.psiParsed,c.lat,c.lon);
+    var hist=wRes?(dataState.wbgtHistory[wRes.station.id]||[]):[];
+    renderCard(c, wbgtResult, lNearby, psiVal, hist);
+  });
+}
+
+// ---------- MAIN REFRESH ----------
+function refresh(){
+  document.getElementById("status-msg").textContent="Refreshing…";
+  document.getElementById("pill-refresh").textContent="…";
+
+  var today=todayStr();
+  Promise.all([
+    fetchProxy("wbgt"),
+    fetchProxy("wbgt", today),
+    fetchProxy("lightning"),
+    fetchProxy("psi")
+  ]).then(function(res){
+    dataState.wbgtStations = parseWBGTLatest(res[0]);
+    dataState.strikes      = parseLightning(res[2]);
+    dataState.psiParsed    = parsePSI(res[3]);
+
+    // Build history lookup keyed by station ID
+    var recs=(res[1]&&res[1].data&&res[1].data.records)||[];
+    dataState.wbgtHistory={};
+    dataState.wbgtStations.forEach(function(s){
+      dataState.wbgtHistory[s.id]=parseWBGTHistory(res[1],s.id);
+    });
+
+    updateAllCards();
+
+    // Pill updates
+    document.getElementById("pill-wbgt").textContent=dataState.wbgtStations.length+" live";
+    document.getElementById("pill-lightning").textContent=dataState.strikes.filter(function(s){return s.time&&s.time>=new Date(Date.now()-30*60*1000);}).length+" strikes";
+    document.getElementById("pill-psi").textContent=dataState.psiParsed.regions.length+" regions";
+    document.getElementById("pill-refresh").textContent=new Date().toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit"});
+    document.getElementById("status-msg").textContent="Live · WBGT every 15 min · Lightning every 2 min · PSI every hour · Dashboard every 5 min";
+
+  }).catch(function(err){
+    document.getElementById("status-msg").textContent="Data error: "+err.message;
+    document.getElementById("pill-refresh").textContent="failed";
+  });
+}
+
+// Faster lightning-only refresh
+function refreshLightning(){
+  fetchProxy("lightning").then(function(res){
+    dataState.strikes=parseLightning(res);
+    updateAllCards();
+    document.getElementById("pill-lightning").textContent=
+      dataState.strikes.filter(function(s){return s.time&&s.time>=new Date(Date.now()-30*60*1000);}).length+" strikes";
+  }).catch(function(){});
+}
+
+buildCards();
+refresh();
+setInterval(refresh, REFRESH_MS);
+setInterval(refreshLightning, LIGHTNING_REFRESH_MS);
+
+})();
+</script>
+</body>
+</html>
