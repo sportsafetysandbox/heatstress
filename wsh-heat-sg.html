@@ -629,7 +629,6 @@ async function run(){
     setLoadingMsg("Fetching WBGT reading…");
     var wbgtJson = await fetchWBGT();
     var parsed = parseStations(wbgtJson);
-    if(!parsed.stations.length) throw new Error("NO_STATIONS");
 
     var nearest = pickNearest(parsed.stations, lat, lon);
     var distanceKm = haversine(lat, lon, nearest.lat, nearest.lon);
@@ -727,25 +726,33 @@ async function fetchAEDData(){
    ============================================================ */
 function parseStations(json){
   var out = { stations:[], timestamp:null };
-  try{
-    var records = json.data.records;
-    if(!records || !records.length) return out;
-    var rec = records[records.length - 1]; // latest
-    out.timestamp = rec.updatedTimestamp || rec.timestamp || null;
-    var readings = (rec.item && rec.item.readings) || [];
-    out.stations = readings.map(function(r){
-      var wbgtNum = parseFloat(r.wbgt);
-      return {
-        stationId: r.station && r.station.id,
-        name: (r.station && r.station.name) || "Unknown station",
-        lat: r.location && r.location.latitude,
-        lon: r.location && r.location.longitude,
-        wbgt: wbgtNum,
-        heatStress: r.heatStress || null,
-        level: classify(wbgtNum, r.heatStress)
-      };
-    }).filter(function(s){ return typeof s.lat === 'number' && typeof s.lon === 'number' && !isNaN(s.wbgt); });
-  }catch(e){ /* leave out empty */ }
+  var data = json && json.data ? json.data : json;
+  var records = data.records || [];
+  if(!records.length) throw new Error("No WBGT readings were returned by the proxy right now.");
+
+  var rec = records[records.length - 1]; // latest
+  out.timestamp = rec.updatedTimestamp || rec.datetime || rec.timestamp || null;
+  var readings = (rec.item && rec.item.readings) || [];
+  if(!readings.length) throw new Error("The latest WBGT record had no station readings.");
+
+  out.stations = readings.map(function(r){
+    var station = r.station || {};
+    var loc = r.location || {};
+    var wbgtNum = Number(r.wbgt);
+    return {
+      stationId: station.id,
+      name: station.name || station.id || "Unknown station",
+      lat: Number(loc.latitude),
+      lon: Number(loc.longitude),
+      wbgt: wbgtNum,
+      heatStress: r.heatStress || null,
+      level: classify(wbgtNum, r.heatStress)
+    };
+  }).filter(function(s){ return !isNaN(s.lat) && !isNaN(s.lon) && !isNaN(s.wbgt); });
+
+  if(!out.stations.length){
+    throw new Error("Couldn't parse any valid WBGT station readings from the response.");
+  }
   return out;
 }
 
