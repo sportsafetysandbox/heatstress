@@ -345,6 +345,7 @@ h1,h2,h3,.num,.label-cond{font-family:'Barlow Condensed',sans-serif;}
       <div class="stage-title" id="errorTitle">Something went wrong</div>
       <div class="stage-body" id="errorBody">We couldn't get your reading. Please try again.</div>
       <div class="perm-steps" id="permSteps" style="display:none;"></div>
+      <div class="perm-steps" id="errorDetail" style="display:none; font-family:monospace; font-size:11px; word-break:break-all;"></div>
       <button class="btn" onclick="run()">Try again</button>
     </div>
   </div>
@@ -443,15 +444,29 @@ h1,h2,h3,.num,.label-cond{font-family:'Barlow Condensed',sans-serif;}
 /* ============================================================
    CONFIG
    ============================================================ */
-// If you deploy a CORS proxy (see original HEAT/SG project notes),
-// set its base URL here. Left blank = calls data.gov.sg directly.
-var PROXY_BASE = "";
+// data.gov.sg's real-time APIs do not return browser-friendly CORS
+// headers, so direct fetch() from this page will typically fail with
+// a network/CORS error — same reason the original HEAT/SG project
+// needed a proxy. This reuses that same, already-deployed Worker
+// as-is (single URL, ?api=<name> query param) — no changes to the
+// Worker needed.
+var PROXY_BASE = "https://wbgt-proxy.ryhanhusainni.workers.dev/";
 
-var WEATHER_API = (PROXY_BASE || "https://api-open.data.gov.sg") + "/v2/real-time/api/weather";
-var PSI_API     = (PROXY_BASE || "https://api-open.data.gov.sg") + "/v2/real-time/api/psi";
-var AED_DATASET_ID = "d_4e6b82c58a8a832f6f1fee5dfa6d47ea"; // SCDF Public Access AEDs (has LATITUDE/LONGITUDE fields already)
-var AED_INITIATE_URL = "https://api-open.data.gov.sg/v1/public/api/datasets/" + AED_DATASET_ID + "/initiate-download";
-var AED_POLL_URL     = "https://api-open.data.gov.sg/v1/public/api/datasets/" + AED_DATASET_ID + "/poll-download";
+var WEATHER_API, PSI_API;
+if (PROXY_BASE) {
+  var proxyBase = PROXY_BASE.replace(/\/$/, '');
+  WEATHER_API = proxyBase + "/"; // ?api=wbgt or ?api=lightning appended by callers
+  PSI_API     = proxyBase + "/?api=psi";
+} else {
+  WEATHER_API = "https://api-open.data.gov.sg/v2/real-time/api/weather";
+  PSI_API     = "https://api-open.data.gov.sg/v2/real-time/api/psi";
+}
+
+// AED locations: fetched same-origin from aed-locations.json — the
+// exact file heat-sg.html already uses. Deploy wsh-heat-sg.html in
+// the same folder as heat-sg.html and aed-locations.json on GitHub
+// Pages and this just works, no proxy involved.
+var AED_FILE = "aed-locations.json";
 
 var LIGHTNING_RADIUS_KM = 6;   // NEA: most strikes occur within 5-6km of a thunderstorm cell
 var LIGHTNING_WINDOW_MIN = 30; // only strikes in the last 30 minutes are a current risk
@@ -669,33 +684,42 @@ function getLocation(){
    ============================================================ */
 async function fetchProxy(url){
   var res = await fetch(url);
-  if(!res.ok) throw new Error("HTTP_" + res.status);
+  if(!res.ok){
+    var bodyText = await res.text();
+    var detail = "";
+    try{
+      var parsed = JSON.parse(bodyText);
+      detail = parsed.errorMsg || parsed.message || parsed.error || parsed.detail || "";
+    }catch(e){ detail = (bodyText || "").slice(0, 200); }
+    var msg = "HTTP " + res.status + (detail ? " — " + detail : "");
+    if(res.status === 403) msg = "NEA rejected the request (HTTP 403). " + (detail || "Check the DATAGOV_API_KEY secret on the Worker.");
+    if(res.status === 429) msg = "Rate limit hit (HTTP 429). Wait a few minutes and try again.";
+    if(res.status === 502) msg = "The proxy couldn't reach NEA. " + (detail || "Try again shortly.");
+    throw new Error(msg);
+  }
   return res.json();
 }
 
 function fetchWBGT(dateParam){
-  var url = WEATHER_API + "?api=wbgt" + (dateParam ? "&date=" + dateParam : "");
+  var url = WEATHER_API + (WEATHER_API.indexOf('?') > -1 ? '&' : '?') + "api=wbgt";
+  if(dateParam) url += "&date=" + encodeURIComponent(dateParam);
   return fetchProxy(url);
 }
 function fetchLightning(){
-  var url = WEATHER_API + "?api=lightning";
+  var url = WEATHER_API + (WEATHER_API.indexOf('?') > -1 ? '&' : '?') + "api=lightning";
   return fetchProxy(url);
 }
 function fetchPSI(){
   return fetchProxy(PSI_API);
 }
 
-async function fetchAEDGeoJSON(){
+async function fetchAEDData(){
   if(aedDataCache) return aedDataCache;
-  var init = await fetchProxy(AED_INITIATE_URL);
-  var poll = await fetchProxy(AED_POLL_URL);
-  var url = (poll && poll.data && poll.data.url) || (init && init.data && init.data.url);
-  if(!url) throw new Error("AED_NO_URL");
-  var res = await fetch(url);
-  if(!res.ok) throw new Error("AED_FETCH_FAIL");
-  var geo = await res.json();
-  aedDataCache = geo;
-  return geo;
+  var res = await fetch(AED_FILE);
+  if(!res.ok) throw new Error("HTTP " + res.status + " loading " + AED_FILE);
+  var data = await res.json();
+  aedDataCache = data;
+  return data;
 }
 
 /* ============================================================
@@ -824,19 +848,17 @@ function findNearestPSIRegion(parsed, lat, lon){
   });
   return best;
 }
-function findNearestAEDs(features, lat, lon, count){
-  var withDist = features.map(function(f){
-    var coords = f.geometry.coordinates; // [lon, lat]
-    var d = haversine(lat, lon, coords[1], coords[0]);
-    var p = f.properties || {};
-    return {
-      distance:d,
-      building: p.BUILDING_NAME || p.ROAD_NAME || "Unnamed location",
-      description: p.AED_LOCATION_DESCRIPTION || [p.HOUSE_NUMBER, p.ROAD_NAME].filter(Boolean).join(" ")
-    };
-  });
-  withDist.sort(function(a,b){ return a.distance - b.distance; });
-  return withDist.slice(0, count);
+function findNearestAEDs(aedList, lat, lon, count){
+  return aedList
+    .map(function(aed){
+      return {
+        building: aed.building,
+        description: aed.location,
+        distance: haversine(lat, lon, aed.lat, aed.lon)
+      };
+    })
+    .sort(function(a, b){ return a.distance - b.distance; })
+    .slice(0, count);
 }
 
 /* ============================================================
@@ -1002,9 +1024,8 @@ async function loadNearestAEDs(lat, lon){
   var list = document.getElementById('aedList');
   list.innerHTML = '<div class="mini-sub">Loading nearest AEDs…</div>';
   try{
-    var geo = await fetchAEDGeoJSON();
-    var features = geo.features || [];
-    var nearest = findNearestAEDs(features, lat, lon, 3);
+    var aedList = await fetchAEDData();
+    var nearest = findNearestAEDs(aedList, lat, lon, 3);
     renderAEDList(nearest);
   }catch(e){
     list.innerHTML = '<div class="mini-sub">AED data unavailable right now.</div>';
@@ -1051,8 +1072,11 @@ function showError(err){
   var title = document.getElementById('errorTitle');
   var body = document.getElementById('errorBody');
   var perm = document.getElementById('permSteps');
+  var detail = document.getElementById('errorDetail');
   perm.style.display = 'none';
   perm.innerHTML = '';
+  detail.style.display = 'none';
+  detail.textContent = '';
 
   if(err && err.code === 1){ // GeolocationPositionError.PERMISSION_DENIED
     title.textContent = 'Location access needed';
@@ -1063,8 +1087,14 @@ function showError(err){
     title.textContent = 'Location not supported';
     body.textContent = 'Your browser does not support location services. Try a different browser.';
   }else{
+    var msg = (err && err.message) ? err.message : String(err);
+    var likelyCORS = /Failed to fetch|NetworkError|Load failed|TypeError/i.test(msg);
     title.textContent = 'Reading unavailable';
-    body.textContent = 'We could not fetch live data just now. Check your connection and try again.';
+    body.textContent = likelyCORS
+      ? 'The live data source blocked this request from the browser (CORS). This app needs a small proxy in front of the data.gov.sg APIs — see the note below the code, or ask for the companion Worker script.'
+      : 'We could not fetch live data just now. Check your connection and try again.';
+    detail.textContent = 'Technical detail: ' + msg;
+    detail.style.display = 'block';
   }
   show('panel-error');
 }
