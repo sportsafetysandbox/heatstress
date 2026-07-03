@@ -435,7 +435,7 @@ h1,h2,h3,.num,.label-cond{font-family:'Barlow Condensed',sans-serif;}
     <div class="disclaimer">
       Data sources: WBGT, lightning and PSI readings — National Environment Agency (NEA), via data.gov.sg real-time APIs. AED locations — Singapore Civil Defence Force (SCDF), via data.gov.sg. Heat stress measures — Ministry of Manpower (MOM). This app is an aid to decision-making and does not replace your site's own risk assessment or emergency procedures.
     </div>
-    <div class="footer">WSH/HEAT-SG · Heat Stress Measures for Outdoor Work</div>
+    <div class="footer">WSH/HEAT-SG · Heat Stress Measures for Outdoor Work<br>Made by Raihan Husainni · Version 1.0</div>
   </div>
 
 </div>
@@ -758,28 +758,27 @@ function parseStations(json){
 
 function extractStationHistory(json, stationId){
   var points = [];
-  try{
-    var records = json.data.records || [];
-    records.forEach(function(rec){
-      var readings = (rec.item && rec.item.readings) || [];
-      var match = readings.find(function(r){ return r.station && r.station.id === stationId; });
-      if(match){
-        var wbgtNum = parseFloat(match.wbgt);
-        points.push({
-          time: rec.updatedTimestamp || rec.timestamp,
-          wbgt: wbgtNum,
-          level: classify(wbgtNum, match.heatStress)
-        });
-      }
-    });
-  }catch(e){}
-  // last 3 hours only
-  var cutoff = Date.now() - 3*60*60*1000;
-  points = points.filter(function(p){
-    var t = Date.parse(p.time);
-    return isNaN(t) ? true : t >= cutoff;
+  var data = json && json.data ? json.data : json;
+  var records = data.records || [];
+  records.forEach(function(rec){
+    var readings = (rec.item && rec.item.readings) || [];
+    var match = readings.find(function(r){ return r.station && r.station.id === stationId; });
+    if(!match) return;
+    var wbgtNum = Number(match.wbgt);
+    if(isNaN(wbgtNum)) return;
+    // Per-day (?date=) records carry "datetime"; the single latest-reading
+    // response carries "updatedTimestamp" — check both, datetime first,
+    // since this function only ever runs against the ?date= response.
+    var timeStr = rec.datetime || rec.updatedTimestamp || rec.timestamp;
+    var t = timeStr ? Date.parse(timeStr) : NaN;
+    if(isNaN(t)) return; // drop points we can't place in time — can't sort or window them otherwise
+    points.push({ time: timeStr, t: t, wbgt: wbgtNum, level: classify(wbgtNum, match.heatStress) });
   });
-  return points;
+
+  points.sort(function(a, b){ return a.t - b.t; }); // oldest to newest, left-to-right on the chart
+
+  var cutoff = Date.now() - 3*60*60*1000;
+  return points.filter(function(p){ return p.t >= cutoff; });
 }
 
 function parseLightning(json){
