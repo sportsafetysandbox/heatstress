@@ -390,24 +390,23 @@ html,body{
 .tl-bar.tl-now.tl-safe    { background:var(--safe);    opacity:1; }
 .tl-bar.tl-now.tl-caution { background:var(--caution); opacity:1; }
 .tl-bar.tl-now.tl-danger  { background:var(--danger);  opacity:1; }
-.tl-label{
-  font-size:11px;
-  color:var(--text-dimmer);
-  white-space:nowrap;
-  padding-left:6px;
-  flex-shrink:0;
-  align-self:center;
-}
-
 /* Card footer */
 .card-foot{
-  padding:5px 12px;
+  padding:6px 12px 8px;
   display:flex;
-  align-items:center;
-  justify-content:space-between;
+  flex-direction:column;
+  gap:2px;
   font-size:11px;
   color:var(--text-dimmer);
-  letter-spacing:0.04em;
+  letter-spacing:0.03em;
+}
+.card-foot-label{
+  color:var(--text-dimmer);
+}
+.card-foot-station{
+  color:var(--text-dim);
+  font-weight:700;
+  font-size:12px;
 }
 </style>
 </head>
@@ -720,11 +719,10 @@ function buildCards(){
           '</div>'+
         '</div>'+
         '<div class="card-timeline" id="tl-'+c.id+'">'+
-          '<span class="tl-label">3 hr</span>'+
         '</div>'+
         '<div class="card-foot">'+
-          '<span>Last 3 hours · WBGT</span>'+
-          '<span id="cf-'+c.id+'">—</span>'+
+          '<span class="card-foot-label">Last 3 hours · WBGT</span>'+
+          '<span class="card-foot-station" id="cf-'+c.id+'">—</span>'+
         '</div>';
       grid.appendChild(card);
     });
@@ -738,7 +736,7 @@ function renderTimeline(centreId, historyPoints, currentLevel){
   var now=new Date(), ago3=new Date(now-3*60*60*1000);
   var recent=historyPoints.filter(function(p){return p.time>=ago3;});
   if(!recent.length) recent=historyPoints.slice(-12);
-  tl.innerHTML='<span class="tl-label">3 hr</span>';
+  tl.innerHTML='';
   if(!recent.length){ var empty=document.createElement("div"); empty.className="tl-bar"; tl.appendChild(empty); return; }
   var vals=recent.map(function(p){return p.value;});
   var minV=Math.min.apply(null,vals), maxV=Math.max.apply(null,vals);
