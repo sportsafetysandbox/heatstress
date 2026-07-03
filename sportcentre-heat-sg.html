@@ -56,6 +56,7 @@ html,body{
   background:var(--ssg-red);
   border-bottom:3px solid #B01228;
   padding:0 28px;
+  color:#fff;
 }
 .header-inner{
   max-width:1600px;
@@ -82,13 +83,13 @@ html,body{
 .brand-main{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:800;
-  font-size:20px;
+  font-size:22px;
   letter-spacing:0.08em;
   color:#fff;
   line-height:1;
 }
 .brand-sub{
-  font-size:10px;
+  font-size:12px;
   letter-spacing:0.12em;
   text-transform:uppercase;
   color:rgba(255,255,255,0.7);
@@ -107,7 +108,7 @@ html,body{
   display:flex;
   align-items:center;
   gap:6px;
-  font-size:11px;
+  font-size:13px;
   color:rgba(255,255,255,0.8);
   letter-spacing:0.06em;
   text-transform:uppercase;
@@ -121,7 +122,7 @@ html,body{
   padding-left:20px;
 }
 .clock-date{
-  font-size:10px;
+  font-size:12px;
   letter-spacing:0.08em;
   text-transform:uppercase;
   color:rgba(255,255,255,0.7);
@@ -129,7 +130,7 @@ html,body{
 .clock-time{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:600;
-  font-size:16px;
+  font-size:18px;
   color:#fff;
   font-variant-numeric:tabular-nums;
   letter-spacing:0.04em;
@@ -151,7 +152,7 @@ html,body{
   overflow-x:auto;
 }
 .data-pill{
-  font-size:11px;
+  font-size:13px;
   color:var(--text-dim);
   padding:0 18px;
   height:100%;
@@ -165,7 +166,7 @@ html,body{
 .data-pill span{ color:var(--white); font-weight:600; margin-left:5px; }
 .status-pill{
   margin-left:auto;
-  font-size:11px;
+  font-size:13px;
   color:var(--text-dim);
   font-style:italic;
   padding-left:16px;
@@ -198,7 +199,7 @@ html,body{
 .zone-icon{
   background:rgba(0,0,0,0.25);
   padding:5px 10px;
-  font-size:11px;
+  font-size:13px;
   letter-spacing:0.16em;
   text-transform:uppercase;
   color:rgba(255,255,255,0.7);
@@ -207,14 +208,14 @@ html,body{
 .zone-name{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:700;
-  font-size:13px;
+  font-size:15px;
   letter-spacing:0.14em;
   text-transform:uppercase;
   color:#fff;
   padding:5px 14px 5px 10px;
 }
 .zone-count{
-  font-size:10px;
+  font-size:12px;
   color:var(--text-dim);
   margin-left:10px;
   font-weight:600;
@@ -277,14 +278,14 @@ html,body{
 .centre-name{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:700;
-  font-size:15px;
+  font-size:17px;
   letter-spacing:0.02em;
   color:var(--white);
   line-height:1.2;
 }
 .card-status-badge{
   flex-shrink:0;
-  font-size:9px;
+  font-size:11px;
   font-weight:700;
   letter-spacing:0.08em;
   text-transform:uppercase;
@@ -313,7 +314,7 @@ html,body{
 }
 .metric+.metric{ border-left:1px solid var(--line); }
 .metric-label{
-  font-size:9px;
+  font-size:11px;
   letter-spacing:0.1em;
   text-transform:uppercase;
   color:var(--text-dimmer);
@@ -323,7 +324,7 @@ html,body{
 .metric-value{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:800;
-  font-size:24px;
+  font-size:26px;
   line-height:1;
   color:var(--white);
   transition:color 0.4s;
@@ -332,7 +333,7 @@ html,body{
 .metric-value.caution{ color:var(--caution); }
 .metric-value.danger { color:var(--danger); }
 .metric-badge{
-  font-size:9px;
+  font-size:11px;
   font-weight:600;
   letter-spacing:0.04em;
   text-transform:uppercase;
@@ -355,7 +356,7 @@ html,body{
   gap:6px;
 }
 .station-info{
-  font-size:10px;
+  font-size:12px;
   color:var(--text-dim);
   line-height:1.3;
 }
@@ -364,7 +365,7 @@ html,body{
   font-weight:600;
 }
 .station-dist{
-  font-size:9px;
+  font-size:11px;
   color:var(--text-dimmer);
 }
 
@@ -383,14 +384,14 @@ html,body{
   background:var(--line);
   transition:height 0.6s ease;
 }
-.tl-bar.tl-safe    { background:var(--safe-dim); }
-.tl-bar.tl-caution { background:var(--caution-dim); }
-.tl-bar.tl-danger  { background:var(--danger-dim); }
-.tl-bar.tl-now.tl-safe    { background:var(--safe); }
-.tl-bar.tl-now.tl-caution { background:var(--caution); }
-.tl-bar.tl-now.tl-danger  { background:var(--danger); }
+.tl-bar.tl-safe    { background:var(--safe);    opacity:0.3; }
+.tl-bar.tl-caution { background:var(--caution); opacity:0.3; }
+.tl-bar.tl-danger  { background:var(--danger);  opacity:0.3; }
+.tl-bar.tl-now.tl-safe    { background:var(--safe);    opacity:1; }
+.tl-bar.tl-now.tl-caution { background:var(--caution); opacity:1; }
+.tl-bar.tl-now.tl-danger  { background:var(--danger);  opacity:1; }
 .tl-label{
-  font-size:9px;
+  font-size:11px;
   color:var(--text-dimmer);
   white-space:nowrap;
   padding-left:6px;
@@ -404,7 +405,7 @@ html,body{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  font-size:9px;
+  font-size:11px;
   color:var(--text-dimmer);
   letter-spacing:0.04em;
 }
@@ -717,14 +718,6 @@ function buildCards(){
             '<div class="metric-value" id="pv-'+c.id+'">—</div>'+
             '<span class="metric-badge" id="pb-'+c.id+'">—</span>'+
           '</div>'+
-        '</div>'+
-        '<div class="card-station">'+
-          '<div class="station-info">'+
-            '<span style="font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dimmer);">WBGT Station · </span>'+
-            '<span class="station-name" id="sn-'+c.id+'">—</span> '+
-            '<span class="station-dist" id="sd-'+c.id+'"></span>'+
-          '</div>'+
-          '<div style="font-size:9px;color:var(--text-dimmer)" id="su-'+c.id+'">—</div>'+
         '</div>'+
         '<div class="card-timeline" id="tl-'+c.id+'">'+
           '<span class="tl-label">3 hr</span>'+
