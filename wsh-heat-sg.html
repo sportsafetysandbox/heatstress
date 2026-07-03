@@ -762,7 +762,7 @@ function extractStationHistory(json, stationId){
   var records = data.records || [];
   var points = [];
 
-  records.forEach(function(record){
+  records.forEach(function(record, idx){
     var readings = (record.item && record.item.readings) || [];
     var match = readings.filter(function(r){
       return r.station && r.station.id === stationId;
@@ -770,16 +770,22 @@ function extractStationHistory(json, stationId){
     if(!match) return;
     var value = Number(match.wbgt);
     if(isNaN(value)) return;
-    // Per-day (?date=) records carry "datetime"; the single latest-reading
-    // response carries "updatedTimestamp" — check both, datetime first,
-    // since this function only ever runs against the ?date= response.
-    var timeStr = record.datetime || record.updatedTimestamp;
+
+    // Try every timestamp field NEA has used across endpoints. If none
+    // parse, keep the point anyway (fall back to the record's original
+    // position for ordering) rather than silently losing a real reading —
+    // that's what was collapsing 12 expected bars down to 6.
+    var timeStr = record.datetime || record.updatedTimestamp || record.timestamp || record.updated_at;
     var time = timeStr ? new Date(timeStr) : null;
-    if(!time || isNaN(time.getTime())) return;
-    points.push({ time: time, value: value, flag: match.heatStress });
+    if(!time || isNaN(time.getTime())) time = null;
+
+    points.push({ time: time, order: idx, value: value, flag: match.heatStress });
   });
 
-  points.sort(function(a, b){ return a.time - b.time; }); // oldest to newest, left-to-right on the chart
+  points.sort(function(a, b){
+    if(a.time && b.time) return a.time - b.time;
+    return a.order - b.order; // records already arrive in chronological order from the API
+  });
   return points;
 }
 
@@ -961,7 +967,7 @@ function renderTimeline(historyPoints, currentLevel){
     var pct = 25 + ((p.value - minV) / range) * 70; // 25–95% height range, keeps short bars visible
     bar.style.height = pct + '%';
     bar.style.background = isLast ? 'var(--' + level + ')' : 'var(--' + level + '-dim)';
-    bar.title = p.time.toLocaleTimeString('en-SG', {hour:'2-digit', minute:'2-digit'}) + ' — ' + p.value.toFixed(1) + '°C';
+    bar.title = (p.time ? p.time.toLocaleTimeString('en-SG', {hour:'2-digit', minute:'2-digit'}) + ' — ' : '') + p.value.toFixed(1) + '°C';
     wrap.appendChild(bar);
   });
 }
