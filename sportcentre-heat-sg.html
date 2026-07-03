@@ -100,22 +100,6 @@ html,body{
   align-items:center;
   gap:24px;
 }
-.legend{
-  display:flex;
-  gap:16px;
-}
-.legend-item{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  font-size:13px;
-  color:rgba(255,255,255,0.8);
-  letter-spacing:0.06em;
-  text-transform:uppercase;
-}
-.legend-dot{
-  width:9px;height:9px;border-radius:50%;flex-shrink:0;
-}
 .clock-block{
   text-align:right;
   border-left:1px solid rgba(255,255,255,0.25);
@@ -423,11 +407,6 @@ html,body{
       </div>
     </div>
     <div class="header-right">
-      <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--safe)"></div>Low / Clear</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--caution)"></div>Moderate</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>High / Alert</div>
-      </div>
       <div class="clock-block">
         <div class="clock-date" id="clock-date">—</div>
         <div class="clock-time" id="clock-time">—</div>
@@ -873,5 +852,20 @@ setInterval(refreshLightning, LIGHTNING_REFRESH_MS);
 
 })();
 </script>
+
+<div style="
+  text-align:center;
+  padding:18px 20px 24px;
+  font-size:12px;
+  color:var(--text-dimmer);
+  letter-spacing:0.04em;
+  border-top:1px solid var(--line);
+  margin-top:8px;
+  line-height:1.8;
+">
+  Made by <strong style="color:var(--text-dim);">Raihan Husainni</strong> &nbsp;·&nbsp; Version 1.0<br>
+  WBGT, Lightning &amp; PSI data from NEA via data.gov.sg
+</div>
+
 </body>
 </html>
