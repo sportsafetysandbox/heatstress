@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>WSH/HEAT-SG — Heat Stress Measures for Outdoor Work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   WSH/HEAT-SG — Heat Stress Measures for Outdoor Work
+   Single-file, no build step. Deploy alongside no other assets
+   (AED + weather data are fetched live from data.gov.sg).
+
+   GUIDANCE SOURCE: MOM "Heat stress measures for outdoor work"
+   (Ministry of Manpower, Singapore) — see MOM_MEASURES object
+   below. Every line of guidance text traces to that document.
+   WBGT / Lightning / PSI / AED data: data.gov.sg real-time APIs.
+   ============================================================ */
+
+:root{
+  --bg:#1A1D1B;
+  --bg-raised:#23271F;
+  --bg-raised-2:#2A2E24;
+  --paper:#F2EFE6;
+  --paper-dim:#B9B6AC;
+  --line:#3A3D34;
+
+  --low:#4A9D6E;
+  --low-dim:#2C4A3A;
+  --mod:#E8A23D;
+  --mod-dim:#4A3B1F;
+  --high:#D14D3F;
+  --high-dim:#4A2620;
+
+  --ambient-low:#0F8A52;
+  --ambient-mod:#D97706;
+  --ambient-high:#C42B1C;
+
+  --status-color:var(--low);
+  --status-dim:var(--low-dim);
+  --status-ambient:var(--ambient-low);
+
+  --accent-mom:#7C9CBF; /* institutional blue-grey, distinguishes MOM card from hazard colors */
+}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  background: radial-gradient(ellipse 140% 90% at 50% 0%, var(--status-ambient) 0%, var(--bg) 70%);
+  transition: background 1s ease;
+  color:var(--paper);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+}
+.shell{
+  width:100%;
+  max-width:460px;
+  min-height:100vh;
+  padding:20px 16px 40px;
+  position:relative;
+}
+h1,h2,h3,.num,.label-cond{font-family:'Barlow Condensed',sans-serif;}
+
+/* ---------- Topbar ---------- */
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  padding-bottom:18px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:20px;
+}
+.brand{display:flex; flex-direction:column;}
+.brand-name{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:800;
+  font-size:22px;
+  letter-spacing:0.5px;
+  line-height:1;
+}
+.brand-name span{color:var(--status-color); transition:color .6s ease;}
+.brand-tag{
+  font-size:11px;
+  color:var(--paper-dim);
+  letter-spacing:0.4px;
+  margin-top:4px;
+  max-width:190px;
+}
+.clock{text-align:right; font-family:'Barlow Condensed',sans-serif;}
+.clock .date{font-size:13px; color:var(--paper-dim); font-weight:600;}
+.clock .time{font-size:20px; font-weight:700;}
+
+/* ---------- Panels ---------- */
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* ---------- Start / Loading / Error ---------- */
+.center-stage{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; min-height:70vh; gap:18px;
+}
+.stage-icon{font-size:44px; line-height:1;}
+.stage-title{font-size:30px; font-weight:700; line-height:1.05;}
+.stage-body{font-size:14px; color:var(--paper-dim); max-width:320px; line-height:1.5;}
+.btn{
+  appearance:none; border:none; cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700; font-size:17px; letter-spacing:0.3px;
+  padding:15px 30px; border-radius:10px;
+  background:var(--status-color); color:#12140F;
+  transition: transform .15s ease, filter .15s ease;
+}
+.btn:active{transform:scale(0.97);}
+.btn.ghost{
+  background:transparent; border:1px solid var(--line); color:var(--paper);
+}
+.spinner{
+  width:34px; height:34px; border-radius:50%;
+  border:3px solid var(--line); border-top-color:var(--status-color);
+  animation:spin 0.9s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.perm-steps{
+  text-align:left; background:var(--bg-raised); border:1px solid var(--line);
+  border-radius:12px; padding:16px 18px; font-size:13px; color:var(--paper-dim);
+  max-width:340px; line-height:1.6;
+}
+.perm-steps b{color:var(--paper);}
+
+/* ---------- Gauge ---------- */
+.gauge-wrap{margin-bottom:18px;}
+.gauge-track{
+  height:10px; border-radius:6px; overflow:hidden; display:flex; position:relative;
+}
+.gauge-seg{flex:1; opacity:0.9;}
+.gauge-seg.low{background:var(--low);}
+.gauge-seg.mod{background:var(--mod);}
+.gauge-seg.high{background:var(--high);}
+.gauge-needle{
+  position:absolute; top:-4px; width:2px; height:18px; background:var(--paper);
+  left:16.6%; transform:translateX(-50%); transition:left .8s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 6px rgba(0,0,0,.5);
+}
+.gauge-labels{
+  display:flex; justify-content:space-between; margin-top:6px;
+  font-size:10px; letter-spacing:0.6px; color:var(--paper-dim); text-transform:uppercase;
+}
+
+/* ---------- Main reading ---------- */
+.main-reading{text-align:center; margin:22px 0 18px;}
+.reading-label{
+  font-size:12px; letter-spacing:1.6px; color:var(--paper-dim); text-transform:uppercase; font-weight:600;
+}
+.reading-value{
+  font-size:88px; font-weight:800; line-height:1; margin:6px 0 10px;
+  color:var(--paper);
+}
+.reading-value sup{font-size:32px; font-weight:600; margin-left:2px;}
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--status-dim); color:var(--status-color);
+  padding:7px 16px; border-radius:20px;
+  font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:16px; letter-spacing:0.4px;
+}
+.badge .dot{width:8px; height:8px; border-radius:50%; background:var(--status-color);}
+
+/* ---------- Mini reading row ---------- */
+.mini-row{display:flex; gap:10px; margin-bottom:22px;}
+.mini-card{
+  flex:1; background:var(--bg-raised); border:1px solid var(--line); border-radius:12px;
+  padding:12px 14px;
+}
+.mini-label{font-size:10px; letter-spacing:1px; color:var(--paper-dim); text-transform:uppercase; font-weight:600; display:flex; align-items:center; gap:5px;}
+.mini-value{font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:700; margin-top:4px;}
+.mini-value.alert{color:var(--high);}
+.mini-value.clear{color:var(--low);}
+.mini-sub{font-size:11px; color:var(--paper-dim); margin-top:2px;}
+
+/* ---------- Cards (generic) ---------- */
+.card{
+  background:var(--bg-raised); border:1px solid var(--line); border-radius:14px;
+  padding:18px; margin-bottom:14px;
+}
+.card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;}
+.card-title{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:20px; letter-spacing:0.2px;}
+.card-sub{font-size:12px; color:var(--paper-dim); margin-top:2px; line-height:1.4;}
+
+/* ---------- MOM Guidance Card ---------- */
+.mom-card{
+  border-color: color-mix(in srgb, var(--accent-mom) 40%, var(--line));
+  background: linear-gradient(180deg, var(--bg-raised) 0%, var(--bg-raised-2) 100%);
+}
+.mom-kicker{
+  font-size:10px; letter-spacing:1.4px; text-transform:uppercase; font-weight:700;
+  color:var(--accent-mom); margin-bottom:4px;
+}
+.mom-band-badge{
+  display:inline-flex; align-items:center; gap:6px; margin-top:10px; margin-bottom:14px;
+  background:var(--status-dim); color:var(--status-color); padding:6px 12px; border-radius:8px;
+  font-size:12px; font-weight:700; font-family:'Barlow Condensed',sans-serif; letter-spacing:0.3px;
+}
+.mom-grid{display:flex; flex-direction:column; gap:10px;}
+.mom-item{
+  display:flex; gap:12px; padding:12px; border-radius:10px;
+  background:rgba(0,0,0,0.15); border:1px solid var(--line);
+}
+.mom-item .icon{
+  flex-shrink:0; width:34px; height:34px; border-radius:8px;
+  background:var(--status-dim); color:var(--status-color);
+  display:flex; align-items:center; justify-content:center; font-size:17px;
+}
+.mom-item .body{flex:1;}
+.mom-item .req-label{
+  font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; margin-bottom:3px;
+}
+.mom-item ul{margin:0; padding-left:16px; font-size:12.5px; color:var(--paper-dim); line-height:1.55;}
+.mom-item ul li{margin-bottom:2px;}
+.mom-item.na{opacity:0.55;}
+.mom-item.na .req-label::after{content:" — Not applicable at this band"; font-size:11px; font-weight:500; color:var(--paper-dim);}
+
+.mom-citation{
+  margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);
+  font-size:11px; color:var(--paper-dim); line-height:1.5;
+}
+
+.toggle-row{
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; padding:10px 0; user-select:none;
+}
+.toggle-row .t-title{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px;}
+.chevron{transition:transform .25s ease; color:var(--paper-dim);}
+.chevron.open{transform:rotate(180deg);}
+.collapsible{max-height:0; overflow:hidden; transition:max-height .3s ease;}
+
+.vuln-list{list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:8px;}
+.vuln-list li{
+  font-size:12.5px; color:var(--paper-dim); padding:9px 11px; background:rgba(0,0,0,0.15);
+  border-radius:8px; border:1px solid var(--line); display:flex; gap:8px; align-items:flex-start;
+}
+.vuln-list li::before{content:"•"; color:var(--accent-mom); font-weight:700;}
+
+/* ---------- Station meta ---------- */
+.station-meta{
+  display:flex; justify-content:space-between; align-items:flex-end;
+  padding:14px 2px 10px; border-bottom:1px solid var(--line); margin-bottom:14px;
+}
+.sm-left .sm-label{font-size:10px; letter-spacing:1px; color:var(--paper-dim); text-transform:uppercase;}
+.sm-left .sm-val{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:17px; margin-top:2px;}
+.sm-right{text-align:right;}
+.sm-right .sm-label{font-size:10px; letter-spacing:1px; color:var(--paper-dim); text-transform:uppercase;}
+.sm-right .sm-val{font-size:12px; margin-top:2px; color:var(--paper-dim);}
+
+/* ---------- Timeline ---------- */
+.timeline-card .bars{
+  display:flex; align-items:flex-end; gap:5px; height:80px; margin-top:12px;
+}
+.timeline-card .bar{
+  flex:1; border-radius:3px 3px 0 0; min-height:4px; transition:height .5s ease;
+  position:relative;
+}
+.timeline-card .bar.low{background:var(--low);}
+.timeline-card .bar.mod{background:var(--mod);}
+.timeline-card .bar.high{background:var(--high);}
+.timeline-empty{font-size:12px; color:var(--paper-dim); padding:20px 0; text-align:center;}
+
+/* ---------- Buttons row ---------- */
+.refresh-btn{
+  width:100%; margin:6px 0 20px; padding:14px; border-radius:12px;
+  background:var(--bg-raised); border:1px solid var(--line); color:var(--paper);
+  font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.4px;
+  cursor:pointer;
+}
+.refresh-btn:active{background:var(--bg-raised-2);}
+
+/* ---------- AED card ---------- */
+.aed-list{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+.aed-item{
+  display:flex; justify-content:space-between; gap:10px; padding:10px 12px;
+  background:rgba(0,0,0,0.15); border:1px solid var(--line); border-radius:10px;
+}
+.aed-item .aed-name{font-size:13px; font-weight:600;}
+.aed-item .aed-desc{font-size:11px; color:var(--paper-dim); margin-top:2px;}
+.aed-item .aed-dist{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; white-space:nowrap;}
+
+/* ---------- Disclaimer / footer ---------- */
+.disclaimer{font-size:11px; color:var(--paper-dim); line-height:1.6; padding:6px 2px 18px;}
+.disclaimer a{color:var(--accent-mom);}
+.footer{text-align:center; font-size:11px; color:var(--paper-dim); padding-bottom:10px;}
+
+.loading-dots-inline{display:inline-flex; gap:3px; vertical-align:middle;}
+.loading-dots-inline span{width:4px; height:4px; border-radius:50%; background:var(--paper-dim); animation:pulse 1.2s infinite ease-in-out;}
+.loading-dots-inline span:nth-child(2){animation-delay:.2s;}
+.loading-dots-inline span:nth-child(3){animation-delay:.4s;}
+@keyframes pulse{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important; transition:none !important;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-name">WSH/<span>HEAT</span>-SG</div>
+      <div class="brand-tag">Heat stress measures for outdoor work — for Occupiers &amp; Employers</div>
+    </div>
+    <div class="clock">
+      <div class="date" id="clockDate">—</div>
+      <div class="time" id="clockTime">—</div>
+    </div>
+  </div>
+
+  <!-- ============ START PANEL ============ -->
+  <div class="panel active" id="panel-start">
+    <div class="center-stage">
+      <div class="stage-icon">🌡️</div>
+      <div class="stage-title">Check heat stress<br>at your worksite</div>
+      <div class="stage-body">
+        Get the live WBGT reading nearest to you, and the exact WSH measures
+        MOM requires you to put in place right now — rest breaks, hydration,
+        monitoring, and more.
+      </div>
+      <button class="btn" onclick="run()">Get my reading</button>
+    </div>
+  </div>
+
+  <!-- ============ LOADING PANEL ============ -->
+  <div class="panel" id="panel-loading">
+    <div class="center-stage">
+      <div class="spinner"></div>
+      <div class="stage-body" id="loadingMsg">Getting your location…</div>
+    </div>
+  </div>
+
+  <!-- ============ ERROR PANEL ============ -->
+  <div class="panel" id="panel-error">
+    <div class="center-stage">
+      <div class="stage-icon">⚠️</div>
+      <div class="stage-title" id="errorTitle">Something went wrong</div>
+      <div class="stage-body" id="errorBody">We couldn't get your reading. Please try again.</div>
+      <div class="perm-steps" id="permSteps" style="display:none;"></div>
+      <button class="btn" onclick="run()">Try again</button>
+    </div>
+  </div>
+
+  <!-- ============ MAIN PANEL ============ -->
+  <div class="panel" id="panel-main">
+
+    <div class="gauge-wrap">
+      <div class="gauge-track">
+        <div class="gauge-seg low"></div>
+        <div class="gauge-seg mod"></div>
+        <div class="gauge-seg high"></div>
+        <div class="gauge-needle" id="gaugeNeedle"></div>
+      </div>
+      <div class="gauge-labels"><span>Below 31°C</span><span>31–33°C</span><span>33°C +</span></div>
+    </div>
+
+    <div class="main-reading">
+      <div class="reading-label">Wet Bulb Globe Temperature</div>
+      <div class="reading-value" id="wbgtValue">--<sup>°C</sup></div>
+      <div class="badge" id="statusBadge"><span class="dot"></span><span id="statusText">—</span></div>
+    </div>
+
+    <div class="mini-row">
+      <div class="mini-card">
+        <div class="mini-label">⚡ Lightning</div>
+        <div class="mini-value" id="lightningValue">…</div>
+        <div class="mini-sub" id="lightningSub">Checking nearby strikes</div>
+      </div>
+      <div class="mini-card">
+        <div class="mini-label">🌫️ Air Quality (PSI)</div>
+        <div class="mini-value" id="psiValue">…</div>
+        <div class="mini-sub" id="psiSub">24-hr regional reading</div>
+      </div>
+    </div>
+
+    <!-- ============ MOM GUIDANCE CARD (replaces main guideline card) ============ -->
+    <div class="card mom-card">
+      <div class="mom-kicker">Ministry of Manpower · Required Measures</div>
+      <div class="card-title">Heat Stress Measures for Outdoor Work</div>
+      <div class="card-sub">Occupiers and employers must implement these measures to reduce heat stress risk for outdoor workers, per WSH Act duties to keep workplaces safe and without risk to health.</div>
+      <div class="mom-band-badge" id="momBandBadge">— WBGT band —</div>
+
+      <div class="mom-grid" id="momGrid"><!-- populated by renderMOMGuidance() --></div>
+
+      <div class="toggle-row" onclick="toggleCollapsible('vulnBody','vulnChevron')">
+        <div class="t-title">Workers vulnerable to heat stress</div>
+        <div class="chevron" id="vulnChevron">▾</div>
+      </div>
+      <div class="collapsible" id="vulnBody">
+        <ul class="vuln-list" id="vulnList"><!-- populated on load --></ul>
+      </div>
+
+      <div class="mom-citation">
+        Source: MOM, <em>Heat stress measures for outdoor work</em>. Under the Workplace Safety and Health Act, employers and occupiers must ensure workplaces are safe and without risk to the health of every person on the premises, and protect the safety and health of every employee.
+      </div>
+    </div>
+
+    <div class="station-meta">
+      <div class="sm-left">
+        <div class="sm-label">WBGT Station</div>
+        <div class="sm-val" id="stationName">—</div>
+      </div>
+      <div class="sm-right">
+        <div class="sm-label">Last updated</div>
+        <div class="sm-val" id="stationUpdated">—</div>
+      </div>
+    </div>
+
+    <div class="card timeline-card">
+      <div class="card-title" style="font-size:15px; letter-spacing:0.6px; text-transform:uppercase;">Last 3 hours at this station</div>
+      <div class="bars" id="timelineBars"></div>
+    </div>
+
+    <button class="refresh-btn" onclick="run()">↻ Refresh reading</button>
+
+    <div class="card">
+      <div class="toggle-row" onclick="toggleCollapsible('aedBody','aedChevron')">
+        <div class="t-title">Nearest AEDs</div>
+        <div class="chevron" id="aedChevron">▾</div>
+      </div>
+      <div class="collapsible" id="aedBody">
+        <div class="aed-list" id="aedList"></div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      Data sources: WBGT, lightning and PSI readings — National Environment Agency (NEA), via data.gov.sg real-time APIs. AED locations — Singapore Civil Defence Force (SCDF), via data.gov.sg. Heat stress measures — Ministry of Manpower (MOM). This app is an aid to decision-making and does not replace your site's own risk assessment or emergency procedures.
+    </div>
+    <div class="footer">WSH/HEAT-SG · Heat Stress Measures for Outdoor Work</div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+// If you deploy a CORS proxy (see original HEAT/SG project notes),
+// set its base URL here. Left blank = calls data.gov.sg directly.
+var PROXY_BASE = "";
+
+var WEATHER_API = (PROXY_BASE || "https://api-open.data.gov.sg") + "/v2/real-time/api/weather";
+var PSI_API     = (PROXY_BASE || "https://api-open.data.gov.sg") + "/v2/real-time/api/psi";
+var AED_DATASET_ID = "d_4e6b82c58a8a832f6f1fee5dfa6d47ea"; // SCDF Public Access AEDs (has LATITUDE/LONGITUDE fields already)
+var AED_INITIATE_URL = "https://api-open.data.gov.sg/v1/public/api/datasets/" + AED_DATASET_ID + "/initiate-download";
+var AED_POLL_URL     = "https://api-open.data.gov.sg/v1/public/api/datasets/" + AED_DATASET_ID + "/poll-download";
+
+var LIGHTNING_RADIUS_KM = 6;   // NEA: most strikes occur within 5-6km of a thunderstorm cell
+var LIGHTNING_WINDOW_MIN = 30; // only strikes in the last 30 minutes are a current risk
+
+/* ============================================================
+   MOM GUIDANCE — "Heat stress measures for outdoor work"
+   Source: MOM_Guideline_for_Heat_Stress_Measures_for_Outdoor_Work
+   Bands: low  = WBGT < 31
+          mod  = 31 <= WBGT < 33
+          high = WBGT >= 33
+   Every array item is guidance text, unmodified in meaning from
+   the source document (light rewording only for list format).
+   ============================================================ */
+var MOM_MEASURES = {
+  low: {
+    bandLabel: "Below 31°C",
+    items: [
+      { key:"acclimatise", icon:"🧑‍🤝‍🧑", label:"Acclimatise", lines:[
+        "Acclimatise workers new to Singapore, or returning from leave of more than a week.",
+        "Gradually increase workers' daily heat exposure over at least 7 days."
+      ]},
+      { key:"monitorWbgt", icon:"📟", label:"Monitor WBGT", lines:[
+        "Monitor WBGT every hour during work hours, especially during hotter periods of the day.",
+        "On-site WBGT meters required for: construction sites with contract sum ≥ S$5 million, shipyards, and the process industry.",
+        "Other workplaces can refer to NEA's myENV app."
+      ]},
+      { key:"drink", icon:"💧", label:"Drink", lines:[
+        "Provide cool or cold drinking water supply near work areas.",
+        "Ensure workers rehydrate regularly."
+      ]},
+      { key:"restShade", icon:"⛱️", label:"Rest & Shade", lines:[
+        "Ensure workers get adequate rest under shade for recovery from heat.",
+        "Provide rest areas near work areas, where feasible."
+      ]},
+      { key:"reschedule", icon:"🗓️", label:"Reschedule", na:true, lines:[] },
+      { key:"monitorWorker", icon:"🩺", label:"Monitor Worker", lines:[
+        "Identify workers vulnerable to heat stress and make re-deployment arrangements where required."
+      ]},
+      { key:"emergency", icon:"🚨", label:"Emergency Response", lines:[
+        "Establish an emergency response plan and implement reporting procedures."
+      ]},
+      { key:"ventilation", icon:"🌬️", label:"Ventilation", na:true, lines:[] }
+    ]
+  },
+  mod: {
+    bandLabel: "31°C to below 33°C",
+    items: [
+      { key:"acclimatise", icon:"🧑‍🤝‍🧑", label:"Acclimatise", lines:[
+        "Acclimatise workers new to Singapore, or returning from leave of more than a week.",
+        "Gradually increase workers' daily heat exposure over at least 7 days."
+      ]},
+      { key:"monitorWbgt", icon:"📟", label:"Monitor WBGT", lines:[
+        "Monitor WBGT every hour during work hours, especially during hotter periods of the day.",
+        "On-site WBGT meters required for: construction sites with contract sum ≥ S$5 million, shipyards, and the process industry.",
+        "Other workplaces can refer to NEA's myENV app."
+      ]},
+      { key:"drink", icon:"💧", label:"Drink", lines:[
+        "Rehydrate at least hourly — recommended intake of 300ml per hour or more, depending on work intensity.",
+        "Provide cool or cold drinking water supply near work areas."
+      ]},
+      { key:"restShade", icon:"⛱️", label:"Rest & Shade", lines:[
+        "31°C to below 32°C: ensure workers get adequate rest under shade for recovery from heat; rest areas near work areas where feasible.",
+        "32°C and above: provide hourly rest breaks of a minimum of 10 minutes for heavy physical work activity."
+      ]},
+      { key:"reschedule", icon:"🗓️", label:"Reschedule", lines:[
+        "Reschedule outdoor physical work to cooler parts of the day, where feasible."
+      ]},
+      { key:"monitorWorker", icon:"🩺", label:"Monitor Worker", lines:[
+        "Identify vulnerable workers and make re-deployment arrangements where required.",
+        "Close monitoring of workers' health condition, particularly for vulnerable workers.",
+        "Implement a buddy system — workers should look out for each other for signs of heat-related illnesses."
+      ]},
+      { key:"emergency", icon:"🚨", label:"Emergency Response", lines:[
+        "Establish an emergency response plan and implement reporting procedures."
+      ]},
+      { key:"ventilation", icon:"🌬️", label:"Ventilation", lines:[
+        "Provide cool rest and work areas with fans, air coolers, etc.",
+        "Provide workers with loose-fitting, light-coloured clothing."
+      ]}
+    ]
+  },
+  high: {
+    bandLabel: "33°C and above",
+    items: [
+      { key:"acclimatise", icon:"🧑‍🤝‍🧑", label:"Acclimatise", lines:[
+        "Acclimatise workers new to Singapore, or returning from leave of more than a week.",
+        "Gradually increase workers' daily heat exposure over at least 7 days."
+      ]},
+      { key:"monitorWbgt", icon:"📟", label:"Monitor WBGT", lines:[
+        "Monitor WBGT every hour during work hours, especially during hotter periods of the day.",
+        "On-site WBGT meters required for: construction sites with contract sum ≥ S$5 million, shipyards, and the process industry.",
+        "Other workplaces can refer to NEA's myENV app."
+      ]},
+      { key:"drink", icon:"💧", label:"Drink", lines:[
+        "Rehydrate at least hourly — recommended intake of 300ml per hour or more, depending on work intensity.",
+        "Provide cool or cold drinking water supply near work areas."
+      ]},
+      { key:"restShade", icon:"⛱️", label:"Rest & Shade", lines:[
+        "Provide hourly rest breaks of a minimum of 15 minutes for heavy physical work activity.",
+        "Longer rest periods recommended as WBGT increases.",
+        "Rest areas to be provided near work areas, where feasible."
+      ]},
+      { key:"reschedule", icon:"🗓️", label:"Reschedule", lines:[
+        "Reschedule outdoor physical work to cooler parts of the day, where feasible."
+      ]},
+      { key:"monitorWorker", icon:"🩺", label:"Monitor Worker", lines:[
+        "Close monitoring of workers' health condition, particularly for vulnerable workers.",
+        "Implement a buddy system — workers should look out for each other for signs of heat-related illnesses.",
+        "Redeploy vulnerable workers to non-outdoor work."
+      ]},
+      { key:"emergency", icon:"🚨", label:"Emergency Response", lines:[
+        "Establish an emergency response plan and implement reporting procedures.",
+        "Standby cold water, ice packs, water spray and cooler boxes for emergencies in the workplace."
+      ]},
+      { key:"ventilation", icon:"🌬️", label:"Ventilation", lines:[
+        "Provide cool rest and work areas with fans, air coolers, etc.",
+        "Provide workers with loose-fitting, light-coloured clothing."
+      ]}
+    ]
+  }
+};
+
+var VULNERABLE_WORKERS = [
+  "Older workers above 65 years old",
+  "Pregnant workers",
+  "Overweight or obese workers",
+  "Newly assigned to outdoor work",
+  "Unacclimatised to hot environments — e.g. new or returning workers from countries with cold climates",
+  "Returning from long leave of more than 1 week",
+  "Currently unwell, or recovering from illness",
+  "With personal risk factors such as chronic diseases, medication use, or history of heat injury"
+];
+
+var PSI_BANDS = [
+  { max:50,  name:"Good" },
+  { max:100, name:"Moderate" },
+  { max:200, name:"Unhealthy" },
+  { max:300, name:"Very Unhealthy" },
+  { max:Infinity, name:"Hazardous" }
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+var aedDataCache = null;
+var lastKnownLatLon = null;
+var lightningPollHandle = null;
+
+/* ============================================================
+   ENTRY POINT
+   ============================================================ */
+async function run(){
+  show('panel-loading');
+  setLoadingMsg("Getting your location…");
+  try{
+    var pos = await getLocation();
+    var lat = pos.coords.latitude, lon = pos.coords.longitude;
+    lastKnownLatLon = {lat:lat, lon:lon};
+
+    setLoadingMsg("Fetching WBGT reading…");
+    var wbgtJson = await fetchWBGT();
+    var parsed = parseStations(wbgtJson);
+    if(!parsed.stations.length) throw new Error("NO_STATIONS");
+
+    var nearest = pickNearest(parsed.stations, lat, lon);
+    var distanceKm = haversine(lat, lon, nearest.lat, nearest.lon);
+
+    var historyJson = await fetchWBGT(todayDateString());
+    var history = extractStationHistory(historyJson, nearest.stationId);
+
+    renderResult(nearest, distanceKm, parsed.timestamp, history);
+    renderMOMGuidance(nearest.level);
+    renderVulnerableWorkers();
+
+    show('panel-main');
+
+    // Parallel, non-blocking loaders
+    loadLightningStatus(lat, lon);
+    loadPSIStatus(lat, lon);
+    loadNearestAEDs(lat, lon);
+
+    if(lightningPollHandle) clearInterval(lightningPollHandle);
+    lightningPollHandle = setInterval(function(){
+      if(lastKnownLatLon) loadLightningStatus(lastKnownLatLon.lat, lastKnownLatLon.lon);
+    }, 2*60*1000);
+
+  }catch(err){
+    console.error(err);
+    showError(err);
+  }
+}
+
+function setLoadingMsg(msg){
+  var el = document.getElementById('loadingMsg');
+  if(el) el.textContent = msg;
+}
+
+/* ============================================================
+   GEOLOCATION
+   ============================================================ */
+function getLocation(){
+  return new Promise(function(resolve, reject){
+    if(!navigator.geolocation){
+      reject({code:'NO_GEO'});
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, function(err){
+      reject(err);
+    }, { enableHighAccuracy:true, timeout:12000, maximumAge:60000 });
+  });
+}
+
+/* ============================================================
+   FETCHERS
+   ============================================================ */
+async function fetchProxy(url){
+  var res = await fetch(url);
+  if(!res.ok) throw new Error("HTTP_" + res.status);
+  return res.json();
+}
+
+function fetchWBGT(dateParam){
+  var url = WEATHER_API + "?api=wbgt" + (dateParam ? "&date=" + dateParam : "");
+  return fetchProxy(url);
+}
+function fetchLightning(){
+  var url = WEATHER_API + "?api=lightning";
+  return fetchProxy(url);
+}
+function fetchPSI(){
+  return fetchProxy(PSI_API);
+}
+
+async function fetchAEDGeoJSON(){
+  if(aedDataCache) return aedDataCache;
+  var init = await fetchProxy(AED_INITIATE_URL);
+  var poll = await fetchProxy(AED_POLL_URL);
+  var url = (poll && poll.data && poll.data.url) || (init && init.data && init.data.url);
+  if(!url) throw new Error("AED_NO_URL");
+  var res = await fetch(url);
+  if(!res.ok) throw new Error("AED_FETCH_FAIL");
+  var geo = await res.json();
+  aedDataCache = geo;
+  return geo;
+}
+
+/* ============================================================
+   PARSERS
+   ============================================================ */
+function parseStations(json){
+  var out = { stations:[], timestamp:null };
+  try{
+    var records = json.data.records;
+    if(!records || !records.length) return out;
+    var rec = records[records.length - 1]; // latest
+    out.timestamp = rec.updatedTimestamp || rec.timestamp || null;
+    var readings = (rec.item && rec.item.readings) || [];
+    out.stations = readings.map(function(r){
+      var wbgtNum = parseFloat(r.wbgt);
+      return {
+        stationId: r.station && r.station.id,
+        name: (r.station && r.station.name) || "Unknown station",
+        lat: r.location && r.location.latitude,
+        lon: r.location && r.location.longitude,
+        wbgt: wbgtNum,
+        heatStress: r.heatStress || null,
+        level: classify(wbgtNum, r.heatStress)
+      };
+    }).filter(function(s){ return typeof s.lat === 'number' && typeof s.lon === 'number' && !isNaN(s.wbgt); });
+  }catch(e){ /* leave out empty */ }
+  return out;
+}
+
+function extractStationHistory(json, stationId){
+  var points = [];
+  try{
+    var records = json.data.records || [];
+    records.forEach(function(rec){
+      var readings = (rec.item && rec.item.readings) || [];
+      var match = readings.find(function(r){ return r.station && r.station.id === stationId; });
+      if(match){
+        var wbgtNum = parseFloat(match.wbgt);
+        points.push({
+          time: rec.updatedTimestamp || rec.timestamp,
+          wbgt: wbgtNum,
+          level: classify(wbgtNum, match.heatStress)
+        });
+      }
+    });
+  }catch(e){}
+  // last 3 hours only
+  var cutoff = Date.now() - 3*60*60*1000;
+  points = points.filter(function(p){
+    var t = Date.parse(p.time);
+    return isNaN(t) ? true : t >= cutoff;
+  });
+  return points;
+}
+
+function parseLightning(json){
+  var out = [];
+  try{
+    var records = json.data.records || [];
+    var rec = records[records.length - 1];
+    var readings = (rec.item && rec.item.readings) || [];
+    out = readings.map(function(r){
+      return {
+        time: r.datetime,
+        lat: r.location && r.location.latitude,
+        lon: r.location && r.location.longitude,
+        type: r.type,
+        text: r.text
+      };
+    }).filter(function(s){ return typeof s.lat === 'number' && typeof s.lon === 'number'; });
+  }catch(e){}
+  return out;
+}
+
+function parsePSI(json){
+  var out = { regions:[], psi24h:{}, timestamp:null };
+  try{
+    var regionMeta = json.data.regionMetadata || [];
+    out.regions = regionMeta.map(function(r){
+      return { name:r.name, lat:r.labelLocation.latitude, lon:r.labelLocation.longitude };
+    });
+    var items = json.data.items || [];
+    var item = items[items.length - 1];
+    out.timestamp = item && item.timestamp;
+    out.psi24h = (item && item.readings && item.readings.psi_twenty_four_hourly) || {};
+  }catch(e){}
+  return out;
+}
+
+/* ============================================================
+   GEO HELPERS
+   ============================================================ */
+function haversine(lat1, lon1, lat2, lon2){
+  var R = 6371;
+  var dLat = (lat2-lat1) * Math.PI/180;
+  var dLon = (lon2-lon1) * Math.PI/180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+          Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+          Math.sin(dLon/2)*Math.sin(dLon/2);
+  var c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R*c;
+}
+function pickNearest(stations, lat, lon){
+  var best=null, bestD=Infinity;
+  stations.forEach(function(s){
+    var d = haversine(lat, lon, s.lat, s.lon);
+    if(d < bestD){ bestD=d; best=s; }
+  });
+  return best;
+}
+function findNearbyLightning(strikes, lat, lon, radiusKm){
+  var cutoff = Date.now() - LIGHTNING_WINDOW_MIN*60*1000;
+  return strikes.filter(function(s){
+    var t = Date.parse(s.time);
+    var withinTime = isNaN(t) ? true : t >= cutoff;
+    var d = haversine(lat, lon, s.lat, s.lon);
+    s._distance = d;
+    return withinTime && d <= radiusKm;
+  }).sort(function(a,b){ return a._distance - b._distance; });
+}
+function findNearestPSIRegion(parsed, lat, lon){
+  var best=null, bestD=Infinity;
+  parsed.regions.forEach(function(r){
+    var d = haversine(lat, lon, r.lat, r.lon);
+    if(d < bestD){ bestD=d; best=r; }
+  });
+  return best;
+}
+function findNearestAEDs(features, lat, lon, count){
+  var withDist = features.map(function(f){
+    var coords = f.geometry.coordinates; // [lon, lat]
+    var d = haversine(lat, lon, coords[1], coords[0]);
+    var p = f.properties || {};
+    return {
+      distance:d,
+      building: p.BUILDING_NAME || p.ROAD_NAME || "Unnamed location",
+      description: p.AED_LOCATION_DESCRIPTION || [p.HOUSE_NUMBER, p.ROAD_NAME].filter(Boolean).join(" ")
+    };
+  });
+  withDist.sort(function(a,b){ return a.distance - b.distance; });
+  return withDist.slice(0, count);
+}
+
+/* ============================================================
+   CLASSIFICATION
+   ============================================================ */
+// MOM bands: low < 31, 31 <= mod < 33, high >= 33
+function classify(value, flag){
+  if(flag){
+    var f = flag.toLowerCase();
+    if(f.indexOf('high') !== -1) return 'high';
+    if(f.indexOf('mod') !== -1) return 'mod';
+    if(f.indexOf('low') !== -1) return 'low';
+  }
+  if(typeof value !== 'number' || isNaN(value)) return 'low';
+  if(value >= 33) return 'high';
+  if(value >= 31) return 'mod';
+  return 'low';
+}
+function classifyPSI(value){
+  for(var i=0;i<PSI_BANDS.length;i++){
+    if(value <= PSI_BANDS[i].max) return PSI_BANDS[i].name;
+  }
+  return "—";
+}
+
+/* ============================================================
+   RENDER: status / gauge / main reading
+   ============================================================ */
+function applyStatus(level){
+  var root = document.documentElement.style;
+  var color, dim, ambient;
+  if(level === 'high'){ color='var(--high)'; dim='var(--high-dim)'; ambient='var(--ambient-high)'; }
+  else if(level === 'mod'){ color='var(--mod)'; dim='var(--mod-dim)'; ambient='var(--ambient-mod)'; }
+  else { color='var(--low)'; dim='var(--low-dim)'; ambient='var(--ambient-low)'; }
+  root.setProperty('--status-color', color);
+  root.setProperty('--status-dim', dim);
+  root.setProperty('--status-ambient', ambient);
+
+  var needlePos = { low: '16.6%', mod: '50%', high: '83.4%' }[level];
+  document.getElementById('gaugeNeedle').style.left = needlePos;
+}
+
+function renderResult(station, distanceKm, timestamp, history){
+  applyStatus(station.level);
+
+  document.getElementById('wbgtValue').innerHTML =
+    (isNaN(station.wbgt) ? '--' : station.wbgt.toFixed(1)) + '<sup>°C</sup>';
+
+  var labelMap = { low:'Low Heat Stress', mod:'Moderate Heat Stress', high:'High Heat Stress' };
+  document.getElementById('statusText').textContent = labelMap[station.level];
+
+  document.getElementById('stationName').textContent =
+    station.name + (isFinite(distanceKm) ? ' · ' + distanceKm.toFixed(1) + ' km away' : '');
+  document.getElementById('stationUpdated').textContent = timestamp ? timeAgo(timestamp) : '—';
+
+  renderTimeline(history, station.level);
+}
+
+function renderTimeline(points, currentLevel){
+  var wrap = document.getElementById('timelineBars');
+  wrap.innerHTML = '';
+  if(!points || !points.length){
+    wrap.innerHTML = '<div class="timeline-empty">No historical readings yet for this station today.</div>';
+    return;
+  }
+  var maxVal = Math.max.apply(null, points.map(function(p){ return isNaN(p.wbgt) ? 0 : p.wbgt; }).concat([33]));
+  points.forEach(function(p){
+    var bar = document.createElement('div');
+    var pct = isNaN(p.wbgt) ? 4 : Math.max(6, (p.wbgt / maxVal) * 100);
+    bar.className = 'bar ' + (p.level || currentLevel);
+    bar.style.height = pct + '%';
+    bar.title = (isNaN(p.wbgt) ? '—' : p.wbgt.toFixed(1)) + '°C';
+    wrap.appendChild(bar);
+  });
+}
+
+/* ============================================================
+   RENDER: MOM guidance card
+   ============================================================ */
+function renderMOMGuidance(level){
+  var band = MOM_MEASURES[level] || MOM_MEASURES.low;
+  document.getElementById('momBandBadge').textContent = 'Current band · WBGT ' + band.bandLabel;
+
+  var grid = document.getElementById('momGrid');
+  grid.innerHTML = '';
+  band.items.forEach(function(item){
+    var div = document.createElement('div');
+    div.className = 'mom-item' + (item.na ? ' na' : '');
+    var linesHtml = item.na ? '' :
+      '<ul>' + item.lines.map(function(l){ return '<li>' + escapeHtml(l) + '</li>'; }).join('') + '</ul>';
+    div.innerHTML =
+      '<div class="icon">' + item.icon + '</div>' +
+      '<div class="body"><div class="req-label">' + escapeHtml(item.label) + '</div>' + linesHtml + '</div>';
+    grid.appendChild(div);
+  });
+}
+
+function renderVulnerableWorkers(){
+  var list = document.getElementById('vulnList');
+  list.innerHTML = VULNERABLE_WORKERS.map(function(v){
+    return '<li>' + escapeHtml(v) + '</li>';
+  }).join('');
+}
+
+function escapeHtml(str){
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ============================================================
+   RENDER: lightning / PSI mini cards
+   ============================================================ */
+function renderLightningState(state, detail){
+  var val = document.getElementById('lightningValue');
+  var sub = document.getElementById('lightningSub');
+  val.classList.remove('alert','clear');
+  if(state === 'loading'){ val.textContent='…'; sub.textContent='Checking nearby strikes'; }
+  else if(state === 'alert'){ val.textContent='Alert'; val.classList.add('alert'); sub.textContent=detail || 'Strikes within 6km'; }
+  else if(state === 'clear'){ val.textContent='Clear'; val.classList.add('clear'); sub.textContent=detail || 'No strikes within 6km'; }
+  else { val.textContent='—'; sub.textContent='Unavailable'; }
+}
+function renderPSIState(state, value, detail){
+  var val = document.getElementById('psiValue');
+  var sub = document.getElementById('psiSub');
+  if(state === 'loading'){ val.textContent='…'; sub.textContent='Fetching reading'; }
+  else if(state === 'reading'){ val.textContent=value; sub.textContent=detail; }
+  else { val.textContent='—'; sub.textContent='Unavailable'; }
+}
+
+async function loadLightningStatus(lat, lon){
+  renderLightningState('loading');
+  try{
+    var json = await fetchLightning();
+    var strikes = parseLightning(json);
+    var nearby = findNearbyLightning(strikes, lat, lon, LIGHTNING_RADIUS_KM);
+    if(nearby.length){
+      renderLightningState('alert', nearby.length + ' strike' + (nearby.length>1?'s':'') + ' within ' + LIGHTNING_RADIUS_KM + 'km');
+    }else{
+      renderLightningState('clear', 'No strikes within ' + LIGHTNING_RADIUS_KM + 'km');
+    }
+  }catch(e){
+    renderLightningState('error');
+  }
+}
+
+async function loadPSIStatus(lat, lon){
+  renderPSIState('loading');
+  try{
+    var json = await fetchPSI();
+    var parsed = parsePSI(json);
+    var region = findNearestPSIRegion(parsed, lat, lon);
+    if(!region){ renderPSIState('error'); return; }
+    var value = parsed.psi24h[region.name];
+    if(typeof value !== 'number'){ renderPSIState('error'); return; }
+    renderPSIState('reading', value, classifyPSI(value) + ' · ' + capitalize(region.name));
+  }catch(e){
+    renderPSIState('error');
+  }
+}
+
+async function loadNearestAEDs(lat, lon){
+  var list = document.getElementById('aedList');
+  list.innerHTML = '<div class="mini-sub">Loading nearest AEDs…</div>';
+  try{
+    var geo = await fetchAEDGeoJSON();
+    var features = geo.features || [];
+    var nearest = findNearestAEDs(features, lat, lon, 3);
+    renderAEDList(nearest);
+  }catch(e){
+    list.innerHTML = '<div class="mini-sub">AED data unavailable right now.</div>';
+  }
+}
+function renderAEDList(nearestAEDs){
+  var list = document.getElementById('aedList');
+  if(!nearestAEDs.length){
+    list.innerHTML = '<div class="mini-sub">No AEDs found nearby.</div>';
+    return;
+  }
+  list.innerHTML = nearestAEDs.map(function(a){
+    return '<div class="aed-item">' +
+      '<div><div class="aed-name">' + escapeHtml(a.building) + '</div>' +
+      '<div class="aed-desc">' + escapeHtml(a.description || '') + '</div></div>' +
+      '<div class="aed-dist">' + a.distance.toFixed(2) + ' km</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ============================================================
+   UI utils
+   ============================================================ */
+function toggleCollapsible(bodyId, chevronId){
+  var body = document.getElementById(bodyId);
+  var chevron = document.getElementById(chevronId);
+  var isOpen = body.style.maxHeight && body.style.maxHeight !== '0px';
+  if(isOpen){
+    body.style.maxHeight = '0px';
+    chevron.classList.remove('open');
+  }else{
+    body.style.maxHeight = body.scrollHeight + 'px';
+    chevron.classList.add('open');
+  }
+}
+
+function show(panelId){
+  ['panel-start','panel-loading','panel-error','panel-main'].forEach(function(id){
+    document.getElementById(id).classList.toggle('active', id === panelId);
+  });
+}
+
+function showError(err){
+  var title = document.getElementById('errorTitle');
+  var body = document.getElementById('errorBody');
+  var perm = document.getElementById('permSteps');
+  perm.style.display = 'none';
+  perm.innerHTML = '';
+
+  if(err && err.code === 1){ // GeolocationPositionError.PERMISSION_DENIED
+    title.textContent = 'Location access needed';
+    body.textContent = 'WSH/HEAT-SG needs your location to find the nearest WBGT station. Enable location access and try again.';
+    perm.innerHTML = permissionHelpHtml(detectPlatform());
+    perm.style.display = 'block';
+  }else if(err && err.code === 'NO_GEO'){
+    title.textContent = 'Location not supported';
+    body.textContent = 'Your browser does not support location services. Try a different browser.';
+  }else{
+    title.textContent = 'Reading unavailable';
+    body.textContent = 'We could not fetch live data just now. Check your connection and try again.';
+  }
+  show('panel-error');
+}
+
+function detectPlatform(){
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua);
+  var isAndroid = /Android/.test(ua);
+  var isChrome = /Chrome/.test(ua) && !/Edg/.test(ua);
+  var isFirefox = /Firefox/.test(ua);
+  var isSafari = /Safari/.test(ua) && !isChrome;
+  var isEdge = /Edg/.test(ua);
+
+  if(isIOS && isSafari) return 'ios-safari';
+  if(isIOS && isChrome) return 'ios-chrome';
+  if(isAndroid && isChrome) return 'android-chrome';
+  if(isAndroid && isFirefox) return 'android-firefox';
+  if(isEdge) return 'desktop-edge';
+  if(isFirefox) return 'desktop-firefox';
+  if(isSafari) return 'desktop-safari';
+  return 'desktop-chrome';
+}
+function permissionHelpHtml(platform){
+  var steps = {
+    'ios-safari': ['Open <b>Settings → Privacy & Security → Location Services</b>.', 'Make sure Location Services is on.', 'Scroll to <b>Safari Websites</b> and set to <b>Allow</b> or <b>Ask Next Time</b>.', 'Reload this page.'],
+    'ios-chrome': ['Open <b>Settings → Privacy & Security → Location Services</b>.', 'Ensure it\'s on, then find <b>Chrome</b> and set to <b>Allow</b>.', 'Reload this page.'],
+    'android-chrome': ['Tap the <b>lock icon</b> in the address bar.', 'Tap <b>Permissions → Location → Allow</b>.', 'Reload this page.'],
+    'android-firefox': ['Tap the <b>lock icon</b> in the address bar.', 'Enable <b>Location</b> permission.', 'Reload this page.'],
+    'desktop-chrome': ['Click the <b>lock/info icon</b> left of the address bar.', 'Set <b>Location</b> to <b>Allow</b>.', 'Reload this page.'],
+    'desktop-edge': ['Click the <b>lock icon</b> left of the address bar.', 'Set <b>Location</b> permission to <b>Allow</b>.', 'Reload this page.'],
+    'desktop-firefox': ['Click the <b>lock icon</b> in the address bar.', 'Clear the location block and reload, then choose <b>Allow</b> when prompted.'],
+    'desktop-safari': ['Open <b>Safari → Settings → Websites → Location</b>.', 'Set this site to <b>Allow</b>.', 'Reload this page.']
+  };
+  var list = steps[platform] || steps['desktop-chrome'];
+  return list.map(function(s, i){ return '<div>' + (i+1) + '. ' + s + '</div>'; }).join('');
+}
+
+function capitalize(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+function todayDateString(){
+  var d = new Date();
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var day = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + day;
+}
+function timeAgo(isoString){
+  var t = Date.parse(isoString);
+  if(isNaN(t)) return '—';
+  var diffMin = Math.round((Date.now() - t) / 60000);
+  if(diffMin < 1) return 'Just now';
+  if(diffMin === 1) return '1 min ago';
+  if(diffMin < 60) return diffMin + ' min ago';
+  var h = Math.floor(diffMin/60);
+  return h + 'h ' + (diffMin%60) + 'm ago';
+}
+
+function tickClock(){
+  var d = new Date();
+  var dateStr = d.toLocaleDateString('en-SG', { weekday:'short', day:'2-digit', month:'short' });
+  var timeStr = d.toLocaleTimeString('en-SG', { hour:'2-digit', minute:'2-digit' });
+  document.getElementById('clockDate').textContent = dateStr;
+  document.getElementById('clockTime').textContent = timeStr + ' SGT';
+}
+tickClock();
+setInterval(tickClock, 30000);
+</script>
+</body>
+</html>
