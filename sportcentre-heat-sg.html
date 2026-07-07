@@ -1064,11 +1064,10 @@ function renderCard(centre, wbgt, lightning, psiVal, history){
 var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}}, crowd:{} };
 
 // ---------- CROWD ----------
-var CROWD_URL = "https://activesg.gov.sg/api/trpc/pass.getFacilityCapacities?input=%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D";
 var CROWD_REFRESH_MS = 3 * 60 * 1000; // 3-min refresh
 
 function fetchCrowd(){
-  return fetch(CROWD_URL)
+  return fetch(PROXY + "?api=crowd")
     .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
     .then(function(json){
       var data = (json&&json.result&&json.result.data&&json.result.data.json)||{};
