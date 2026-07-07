@@ -288,7 +288,7 @@ html,body{
 /* Metrics row */
 .card-metrics{
   display:grid;
-  grid-template-columns:1fr 1fr 1fr;
+  grid-template-columns:1fr 1fr;
   border-bottom:1px solid var(--line);
 }
 .metric{
@@ -640,7 +640,12 @@ function parseLightning(json){
 }
 function nearbyLightning(strikes,lat,lon){
   var cutoff=new Date(Date.now()-30*60*1000);
-  return strikes.filter(function(s){return s.time&&s.time>=cutoff&&haversine(lat,lon,s.lat,s.lon)<=LIGHTNING_RADIUS_KM;});
+  var nearby=strikes.filter(function(s){return s.time&&s.time>=cutoff&&haversine(lat,lon,s.lat,s.lon)<=LIGHTNING_RADIUS_KM;});
+  return {
+    g: nearby.filter(function(s){return s.type==="G";}),  // Cloud-to-Ground (dangerous)
+    c: nearby.filter(function(s){return s.type==="C";}),  // Cloud-to-Cloud
+    all: nearby
+  };
 }
 
 // ---------- PARSE PSI ----------
@@ -687,14 +692,19 @@ function buildCards(){
             '<span class="metric-badge" id="wb-'+c.id+'">—</span>'+
           '</div>'+
           '<div class="metric">'+
-            '<div class="metric-label">Lightning</div>'+
-            '<div class="metric-value" id="lv-'+c.id+'">—</div>'+
-            '<span class="metric-badge" id="lb-'+c.id+'">—</span>'+
-          '</div>'+
-          '<div class="metric">'+
             '<div class="metric-label">PSI</div>'+
             '<div class="metric-value" id="pv-'+c.id+'">—</div>'+
             '<span class="metric-badge" id="pb-'+c.id+'">—</span>'+
+          '</div>'+
+          '<div class="metric">'+
+            '<div class="metric-label">Cloud-to-Ground ⚡</div>'+
+            '<div class="metric-value" id="lgv-'+c.id+'">—</div>'+
+            '<span class="metric-badge" id="lgb-'+c.id+'">—</span>'+
+          '</div>'+
+          '<div class="metric">'+
+            '<div class="metric-label">Cloud-to-Cloud ☁</div>'+
+            '<div class="metric-value" id="lcv-'+c.id+'">—</div>'+
+            '<span class="metric-badge" id="lcb-'+c.id+'">—</span>'+
           '</div>'+
         '</div>'+
         '<div class="card-timeline" id="tl-'+c.id+'">'+
@@ -732,12 +742,13 @@ function renderTimeline(centreId, historyPoints, currentLevel){
 }
 
 // ---------- RENDER CARD ----------
-function renderCard(centre, wbgt, lightningNearby, psiVal, history){
+function renderCard(centre, wbgt, lightning, psiVal, history){
   var card=document.getElementById("card-"+centre.id);
   if(!card) return;
 
   var wLevel=classifyWBGT(wbgt.value,wbgt.flag);
-  var lLevel=lightningNearby.length>0?"danger":"safe";
+  // C2G (cloud-to-ground) = danger; C2C alone = caution; neither = safe
+  var lLevel=lightning.g.length>0?"danger":lightning.c.length>0?"caution":"safe";
   var pLevel=classifyPSI(psiVal);
   var overall=worstOf([wLevel,lLevel,pLevel].filter(Boolean));
 
@@ -753,17 +764,23 @@ function renderCard(centre, wbgt, lightningNearby, psiVal, history){
   var wLabels={"safe":"Low","caution":"Moderate","danger":"High"};
   if(wb){ wb.textContent=wLevel?wLabels[wLevel]:"N/A"; wb.className="metric-badge"+(wLevel?" "+wLevel:""); }
 
-  // Lightning
-  var lv=document.getElementById("lv-"+centre.id), lb=document.getElementById("lb-"+centre.id);
-  var lAlert=lightningNearby.length>0;
-  if(lv){ lv.textContent=lAlert?"⚡ "+lightningNearby.length:"✓"; lv.className="metric-value"+(lAlert?" danger":" safe"); lv.style.fontSize="20px"; lv.style.lineHeight="1.3"; }
-  if(lb){ lb.textContent=lAlert?lightningNearby.length+" within 6km":"Clear"; lb.className="metric-badge"+(lAlert?" danger":" safe"); }
-
   // PSI
   var pv=document.getElementById("pv-"+centre.id), pb=document.getElementById("pb-"+centre.id);
   var pLabels={"safe":"Good/Mod","caution":"Unhealthy","danger":"V. Unhealthy"};
   if(pv){ pv.textContent=!isNaN(psiVal)?psiVal:"—"; pv.className="metric-value"+(pLevel?" "+pLevel:""); }
   if(pb){ pb.textContent=pLevel?pLabels[pLevel]:"N/A"; pb.className="metric-badge"+(pLevel?" "+pLevel:""); }
+
+  // Cloud-to-Ground lightning (the dangerous kind)
+  var lgv=document.getElementById("lgv-"+centre.id), lgb=document.getElementById("lgb-"+centre.id);
+  var gAlert=lightning.g.length>0;
+  if(lgv){ lgv.textContent=gAlert?lightning.g.length:"✓"; lgv.className="metric-value"+(gAlert?" danger":" safe"); lgv.style.fontSize="22px"; lgv.style.lineHeight="1.3"; }
+  if(lgb){ lgb.textContent=gAlert?lightning.g.length+" within 6km":"Clear"; lgb.className="metric-badge"+(gAlert?" danger":" safe"); }
+
+  // Cloud-to-Cloud lightning
+  var lcv=document.getElementById("lcv-"+centre.id), lcb=document.getElementById("lcb-"+centre.id);
+  var cAlert=lightning.c.length>0;
+  if(lcv){ lcv.textContent=cAlert?lightning.c.length:"✓"; lcv.className="metric-value"+(cAlert?" caution":" safe"); lcv.style.fontSize="22px"; lcv.style.lineHeight="1.3"; }
+  if(lcb){ lcb.textContent=cAlert?lightning.c.length+" within 6km":"Clear"; lcb.className="metric-badge"+(cAlert?" caution":" safe"); }
 
   // Station
   var sn=document.getElementById("sn-"+centre.id);
@@ -824,7 +841,13 @@ function refresh(){
 
     // Pill updates
     document.getElementById("pill-wbgt").textContent=dataState.wbgtStations.length+" live";
-    document.getElementById("pill-lightning").textContent=dataState.strikes.filter(function(s){return s.time&&s.time>=new Date(Date.now()-30*60*1000);}).length+" strikes";
+    document.getElementById("pill-lightning").textContent=(function(){
+      var cutoff=new Date(Date.now()-30*60*1000);
+      var recent=dataState.strikes.filter(function(s){return s.time&&s.time>=cutoff;});
+      var g=recent.filter(function(s){return s.type==="G";}).length;
+      var c=recent.filter(function(s){return s.type==="C";}).length;
+      return "G:"+g+" C:"+c;
+    })();
     document.getElementById("pill-psi").textContent=dataState.psiParsed.regions.length+" regions";
     document.getElementById("pill-refresh").textContent=new Date().toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit"});
     document.getElementById("status-msg").textContent="Live · WBGT every 15 min · Lightning every 2 min · PSI every hour · Dashboard every 5 min";
@@ -840,8 +863,13 @@ function refreshLightning(){
   fetchProxy("lightning").then(function(res){
     dataState.strikes=parseLightning(res);
     updateAllCards();
-    document.getElementById("pill-lightning").textContent=
-      dataState.strikes.filter(function(s){return s.time&&s.time>=new Date(Date.now()-30*60*1000);}).length+" strikes";
+    (function(){
+      var cutoff=new Date(Date.now()-30*60*1000);
+      var recent=dataState.strikes.filter(function(s){return s.time&&s.time>=cutoff;});
+      var g=recent.filter(function(s){return s.type==="G";}).length;
+      var c=recent.filter(function(s){return s.type==="C";}).length;
+      document.getElementById("pill-lightning").textContent="G:"+g+" C:"+c;
+    })();
   }).catch(function(){});
 }
 
