@@ -1064,27 +1064,27 @@ function renderCard(centre, wbgt, lightning, psiVal, history){
 var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}}, crowd:{} };
 
 // ---------- CROWD ----------
-// crowd-data.json is written by GitHub Actions every 15 min (0700–2200 SGT)
-// and committed to the repo — no CORS issues since it's on raw.githubusercontent.com
-var CROWD_JSON_URL = "https://raw.githubusercontent.com/sportsafetysandbox/heatstress/main/crowd-data.json";
-var CROWD_REFRESH_MS = 5 * 60 * 1000; // check every 5 min (file updates every 15 min)
+// Crowd data is supplied by the HEAT/SG Crowd Feeder browser extension.
+// The extension fetches from activesg.gov.sg (bypassing bot protection via
+// the browser's existing Cloudflare cookie) and dispatches a custom event.
+var CROWD_REFRESH_MS = 5 * 60 * 1000; // re-request from extension every 5 min
 
 function fetchCrowd(){
-  return fetch(CROWD_JSON_URL + "?t=" + Date.now()) // cache-bust
-    .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
-    .then(function(json){
-      if(json.error){
-        console.warn("Crowd data unavailable:", json.status||json.message);
-        return;
-      }
-      var lookup = {};
-      (json.gymFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
-      (json.swimFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
-      dataState.crowd = lookup;
-      dataState.crowdUpdatedAt = json.updatedAt||null;
-      updateCrowdCards();
-    }).catch(function(e){ console.warn("Crowd fetch failed:", e.message); });
+  // Ask the extension for the latest cached data
+  window.dispatchEvent(new CustomEvent('heatsg:requestCrowd'));
 }
+
+// Listen for crowd data delivered by the extension content script
+window.addEventListener('heatsg:crowd', function(e){
+  var json = e.detail;
+  if(!json || json.error) return;
+  var lookup = {};
+  (json.gymFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
+  (json.swimFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
+  dataState.crowd = lookup;
+  dataState.crowdUpdatedAt = json.updatedAt||null;
+  updateCrowdCards();
+});
 
 function crowdClass(pct){
   return pct >= 75 ? "pct-high" : pct >= 50 ? "pct-mod" : "";
