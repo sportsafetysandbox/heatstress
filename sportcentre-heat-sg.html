@@ -1077,17 +1077,27 @@ function renderCard(centre, wbgt, lightning, psiVal, history){
 var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}}, crowd:{} };
 
 // ---------- CROWD ----------
-// Crowd data is supplied by the HEAT/SG Crowd Feeder browser extension.
-// The extension fetches from activesg.gov.sg (bypassing bot protection via
-// the browser's existing Cloudflare cookie) and dispatches a custom event.
-var CROWD_REFRESH_MS = 5 * 60 * 1000; // re-request from extension every 5 min
+// Fetched via the Cloudflare Worker proxy which includes the
+// cf_clearance cookie — works on all devices, no extension needed.
+var CROWD_REFRESH_MS = 15 * 60 * 1000; // refresh every 15 min
 
 function fetchCrowd(){
-  // Ask the extension for the latest cached data
-  window.dispatchEvent(new CustomEvent('heatsg:requestCrowd'));
+  return fetch(PROXY + "?api=crowd")
+    .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+    .then(function(json){
+      var inner = (json&&json.result&&json.result.data&&json.result.data.json)||{};
+      if(!inner.gymFacilities) throw new Error("No facility data");
+      var lookup = {};
+      (inner.gymFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
+      (inner.swimFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
+      dataState.crowd = lookup;
+      dataState.crowdUpdatedAt = new Date().toISOString();
+      updateCrowdCards();
+    }).catch(function(e){ console.warn("Crowd fetch failed:", e.message); });
 }
 
-// Listen for crowd data delivered by the extension content script
+// Also listen for data from the browser extension if installed
+// (extension provides faster updates during desktop use)
 window.addEventListener('heatsg:crowd', function(e){
   var json = e.detail;
   if(!json || json.error) return;
