@@ -578,7 +578,7 @@ html,body{
 .card-crowd{
   display:grid;
   grid-template-columns:1fr 1fr;
-  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
 }
 .crowd-cell{
   padding:8px 12px;
@@ -936,6 +936,20 @@ function buildCards(){
           '<div class="centre-name">'+c.name+'</div>'+
           '<div class="card-status-badge" id="csb-'+c.id+'">Loading</div>'+
         '</div>'+
+        '<div class="card-crowd">'+
+          '<div class="crowd-cell">'+
+            '<div class="crowd-label">🏋 Gym</div>'+
+            '<div class="crowd-bar-wrap"><div class="crowd-bar-fill" id="gbf-'+c.id+'" style="width:0%"></div></div>'+
+            '<div class="crowd-pct" id="gpct-'+c.id+'">'+(c.gymId?'—':'N/A')+'</div>'+
+            '<div class="crowd-status" id="gsts-'+c.id+'">'+(c.gymId?'Loading':'No gantry data')+'</div>'+
+          '</div>'+
+          '<div class="crowd-cell">'+
+            '<div class="crowd-label">🏊 Pool</div>'+
+            '<div class="crowd-bar-wrap"><div class="crowd-bar-fill" id="pbf-'+c.id+'" style="width:0%"></div></div>'+
+            '<div class="crowd-pct" id="ppct-'+c.id+'">'+(c.poolId?'—':'N/A')+'</div>'+
+            '<div class="crowd-status" id="psts-'+c.id+'">'+(c.poolId?'Loading':'No gantry data')+'</div>'+
+          '</div>'+
+        '</div>'+
         '<div class="card-metrics">'+
           '<div class="card-divider">'+
             '<span class="card-divider-label">⚡ Lightning Alert (within 6 km)</span>'+
@@ -969,20 +983,6 @@ function buildCards(){
           '</div>'+
         '</div>'+
         '<div class="card-timeline" id="tl-'+c.id+'">'+
-        '</div>'+
-        '<div class="card-crowd">'+
-          '<div class="crowd-cell">'+
-            '<div class="crowd-label">🏋 Gym</div>'+
-            '<div class="crowd-bar-wrap"><div class="crowd-bar-fill" id="gbf-'+c.id+'" style="width:0%"></div></div>'+
-            '<div class="crowd-pct" id="gpct-'+c.id+'">'+(c.gymId?'—':'N/A')+'</div>'+
-            '<div class="crowd-status" id="gsts-'+c.id+'">'+(c.gymId?'Loading':'No gantry data')+'</div>'+
-          '</div>'+
-          '<div class="crowd-cell">'+
-            '<div class="crowd-label">🏊 Pool</div>'+
-            '<div class="crowd-bar-wrap"><div class="crowd-bar-fill" id="pbf-'+c.id+'" style="width:0%"></div></div>'+
-            '<div class="crowd-pct" id="ppct-'+c.id+'">'+(c.poolId?'—':'N/A')+'</div>'+
-            '<div class="crowd-status" id="psts-'+c.id+'">'+(c.poolId?'Loading':'No gantry data')+'</div>'+
-          '</div>'+
         '</div>'+
         '<div class="card-foot">'+
           '<span class="card-foot-label">Last 3 hours · WBGT</span>'+
