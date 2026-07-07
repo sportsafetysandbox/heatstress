@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "HEAT/SG Crowd Feeder",
+  "version": "1.0",
+  "description": "Fetches ActiveSG gym and pool crowd data for the HEAT/SG dashboard.",
+  "permissions": [
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://activesg.gov.sg/*",
+    "https://sportsafetysandbox.github.io/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://sportsafetysandbox.github.io/heatstress/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
