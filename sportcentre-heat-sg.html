@@ -31,13 +31,16 @@
   --ssg-red:      #E31837;
   --ssg-red-dim:  #FDEAED;   /* light red tint for light bg */
 
-  /* Status colours — adjusted for light background */
-  --safe:         #15803D;   /* deep green — readable on light */
-  --safe-dim:     #DCFCE7;   /* pale green fill */
-  --caution:      #B45309;   /* deep amber */
-  --caution-dim:  #FEF3C7;   /* pale amber fill */
-  --danger:       #B91C1C;   /* deep red */
-  --danger-dim:   #FEE2E2;   /* pale red fill */
+  /* Status colours — matched exactly from user palette */
+  --safe:         #CAD73E;   /* yellow-green — borders, backgrounds */
+  --safe-dim:     #F4F7D0;   /* pale tint for light card bg */
+  --safe-text:    #636A00;   /* darkened for readable text on white */
+  --caution:      #FFC432;   /* amber/gold — borders, backgrounds */
+  --caution-dim:  #FFF3CC;   /* pale tint for light card bg */
+  --caution-text: #7A5200;   /* darkened for readable text on white */
+  --danger:       #F50016;   /* red — borders, backgrounds */
+  --danger-dim:   #FFD0D4;   /* pale tint for light card bg */
+  --danger-text:  #A30010;   /* darkened for readable text on white */
 
   /* Zone header accent */
   --zone-border:  #E31837;
@@ -226,29 +229,127 @@ html,body{
   border-top:3px solid var(--text-dimmer);
   border-radius:6px;
   overflow:hidden;
-  transition:border-top-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease;
+  transition:border-top-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease, color 0.4s ease;
 }
+
+/* Full card background = palette colour — text needs dark overrides for legibility */
 .centre-card.st-safe{
-  border-top-color:var(--safe);
+  background:#CAD73E;
+  border-top-color:#8B9600;
+  border-color:#8B9600;
 }
 .centre-card.st-caution{
-  border-top-color:var(--caution);
-  background:color-mix(in srgb, var(--caution-dim) 30%, var(--bg-card));
+  background:#FFC432;
+  border-top-color:#B88000;
+  border-color:#B88000;
 }
 .centre-card.st-danger{
-  border-top-color:var(--danger);
-  background:color-mix(in srgb, var(--danger-dim) 40%, var(--bg-card));
-  box-shadow:0 0 0 1px var(--danger-dim);
+  background:#F50016;
+  border-top-color:#A30010;
+  border-color:#A30010;
   animation:danger-pulse 2.5s ease-in-out infinite;
 }
 @keyframes danger-pulse{
-  0%,100%{ box-shadow:0 0 0 0 rgba(239,68,68,0); }
-  50%{ box-shadow:0 0 0 4px rgba(239,68,68,0.1); }
+  0%,100%{ box-shadow:0 0 0 0 rgba(245,0,22,0); }
+  50%{ box-shadow:0 0 0 6px rgba(245,0,22,0.25); }
 }
 @media(prefers-reduced-motion:reduce){
   .centre-card.st-danger{ animation:none; }
 }
 .centre-card.st-loading{ opacity:0.45; }
+
+/* Text: pure black for all readings inside coloured cards */
+.st-safe .centre-name,
+.st-caution .centre-name,
+.st-danger .centre-name{ color:#000; }
+
+.st-safe .card-status-badge,
+.st-caution .card-status-badge,
+.st-danger .card-status-badge{
+  background:rgba(255,255,255,0.3);
+  color:#000;
+  border-color:rgba(255,255,255,0.5);
+}
+
+.st-safe .metric-label,
+.st-caution .metric-label,
+.st-danger .metric-label{ color:rgba(0,0,0,0.6); }
+
+.st-safe .metric-value,
+.st-caution .metric-value,
+.st-danger .metric-value{ color:#000; }
+
+.st-safe .metric-badge,
+.st-caution .metric-badge,
+.st-danger .metric-badge{ color:#000; }
+
+/* Internal dividers: white */
+.st-safe .card-divider,
+.st-caution .card-divider,
+.st-danger .card-divider{
+  background:rgba(255,255,255,0.2);
+  border-color:rgba(255,255,255,0.6);
+}
+
+.st-safe .card-divider-label,
+.st-caution .card-divider-label,
+.st-danger .card-divider-label{ color:rgba(0,0,0,0.65); }
+
+.st-safe .metric,
+.st-caution .metric,
+.st-danger .metric{ border-color:rgba(255,255,255,0.6); }
+
+.st-safe .card-timeline,
+.st-caution .card-timeline,
+.st-danger .card-timeline{ border-color:rgba(255,255,255,0.6); }
+
+.st-safe .card-foot,
+.st-caution .card-foot,
+.st-danger .card-foot{ border-color:rgba(255,255,255,0.6); }
+
+.st-safe .card-foot-label,
+.st-caution .card-foot-label,
+.st-danger .card-foot-label{ color:rgba(0,0,0,0.55); }
+
+.st-safe .card-foot-station,
+.st-caution .card-foot-station,
+.st-danger .card-foot-station{ color:#000; }
+
+.st-safe .card-head,
+.st-caution .card-head,
+.st-danger .card-head{ border-color:rgba(255,255,255,0.6); }
+
+/* Keep timeline bar colours vivid and readable on coloured card backgrounds */
+.st-safe .tl-bar    { background:rgba(0,0,0,0.2); opacity:1; }
+.st-caution .tl-bar { background:rgba(0,0,0,0.2); opacity:1; }
+.st-danger .tl-bar  { background:rgba(255,255,255,0.3); opacity:1; }
+
+.st-safe .tl-bar.tl-now    { background:rgba(0,0,0,0.55); }
+.st-caution .tl-bar.tl-now { background:rgba(0,0,0,0.55); }
+.st-danger .tl-bar.tl-now  { background:rgba(255,255,255,0.85); }
+
+/* Colour-coded bars outside coloured cards already handled by tl-safe/caution/danger classes */
+/* Override: when a bar is inside a coloured card, use its own level colour against the card bg */
+.st-safe .tl-bar.tl-safe       { background:rgba(0,0,0,0.5); }
+.st-safe .tl-bar.tl-caution    { background:#FFC432; opacity:0.7; }
+.st-safe .tl-bar.tl-danger     { background:#F50016; opacity:0.7; }
+.st-safe .tl-bar.tl-now.tl-safe    { background:rgba(0,0,0,0.7); opacity:1; }
+.st-safe .tl-bar.tl-now.tl-caution { background:#B88000; opacity:1; }
+.st-safe .tl-bar.tl-now.tl-danger  { background:#A30010; opacity:1; }
+
+.st-caution .tl-bar.tl-safe    { background:#636A00; opacity:0.6; }
+.st-caution .tl-bar.tl-caution { background:rgba(0,0,0,0.45); }
+.st-caution .tl-bar.tl-danger  { background:#F50016; opacity:0.8; }
+.st-caution .tl-bar.tl-now.tl-safe    { background:#636A00; opacity:1; }
+.st-caution .tl-bar.tl-now.tl-caution { background:rgba(0,0,0,0.65); opacity:1; }
+.st-caution .tl-bar.tl-now.tl-danger  { background:#A30010; opacity:1; }
+
+.st-danger .tl-bar.tl-safe     { background:#CAD73E; opacity:0.7; }
+.st-danger .tl-bar.tl-caution  { background:#FFC432; opacity:0.7; }
+.st-danger .tl-bar.tl-danger   { background:rgba(255,255,255,0.35); }
+.st-danger .tl-bar.tl-now.tl-safe    { background:#CAD73E; opacity:1; }
+.st-danger .tl-bar.tl-now.tl-caution { background:#FFC432; opacity:1; }
+.st-danger .tl-bar.tl-now.tl-danger  { background:rgba(255,255,255,0.9); opacity:1; }
 
 /* Card header */
 .card-head{
@@ -281,9 +382,9 @@ html,body{
   transition:background 0.4s, color 0.4s, border-color 0.4s;
   white-space:nowrap;
 }
-.st-safe .card-status-badge{ background:var(--safe-dim); color:var(--safe); border-color:var(--safe); }
-.st-caution .card-status-badge{ background:var(--caution-dim); color:var(--caution); border-color:var(--caution); }
-.st-danger .card-status-badge{ background:var(--danger-dim); color:var(--danger); border-color:var(--danger); }
+.st-safe .card-status-badge{ background:var(--safe-dim); color:var(--safe-text); border-color:var(--safe); }
+.st-caution .card-status-badge{ background:var(--caution-dim); color:var(--caution-text); border-color:var(--caution); }
+.st-danger .card-status-badge{ background:var(--danger-dim); color:var(--danger-text); border-color:var(--danger); }
 
 /* Metrics row */
 .card-metrics{
@@ -297,6 +398,86 @@ html,body{
   position:relative;
 }
 .metric+.metric{ border-left:1px solid var(--line); }
+/* Border separating the C2G/C2C lightning row from the WBGT/PSI row below.
+   Grid order: 1=divider, 2=C2G, 3=C2C, 4=WBGT, 5=PSI */
+.card-metrics > .metric:nth-child(4){
+  border-top:1px solid var(--line);
+}
+.card-metrics > .metric:nth-child(5){
+  border-top:1px solid var(--line);
+  border-left:1px solid var(--line);
+}
+.card-divider{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:0 12px;
+  border-bottom:1px solid var(--line);
+  background:var(--bg-card-alt);
+  height:28px;
+}
+.card-divider-label{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--text-dimmer);
+  white-space:nowrap;
+}
+.info-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:15px;
+  height:15px;
+  border-radius:50%;
+  border:1px solid var(--text-dimmer);
+  font-size:9px;
+  font-weight:700;
+  color:var(--text-dimmer);
+  cursor:pointer;
+  position:relative;
+  flex-shrink:0;
+  font-style:normal;
+  line-height:1;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.info-icon .tooltip{
+  display:none;
+  position:fixed;
+  bottom:auto;
+  left:auto;
+  transform:none;
+  width:280px;
+  background:#1A2233;
+  color:#F2EFE6;
+  font-size:11px;
+  font-weight:400;
+  letter-spacing:0.01em;
+  text-transform:none;
+  line-height:1.6;
+  padding:10px 12px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,0.1);
+  box-shadow:0 4px 16px rgba(0,0,0,0.3);
+  z-index:9999;
+  pointer-events:none;
+}
+.info-icon .tooltip::after{
+  content:'';
+  position:absolute;
+  top:100%;
+  left:20px;
+  border:5px solid transparent;
+  border-top-color:#1A2233;
+}
+.info-icon:hover .tooltip,
+.info-icon:focus .tooltip,
+.info-icon.active .tooltip{
+  display:block;
+}
 .metric-label{
   font-size:11px;
   letter-spacing:0.1em;
@@ -313,9 +494,9 @@ html,body{
   color:var(--white);
   transition:color 0.4s;
 }
-.metric-value.safe  { color:var(--safe); }
-.metric-value.caution{ color:var(--caution); }
-.metric-value.danger { color:var(--danger); }
+.metric-value.safe  { color:var(--safe-text); }
+.metric-value.caution{ color:var(--caution-text); }
+.metric-value.danger { color:var(--danger-text); }
 .metric-badge{
   font-size:11px;
   font-weight:600;
@@ -326,9 +507,9 @@ html,body{
   display:block;
   line-height:1.3;
 }
-.metric-badge.safe  { color:var(--safe); }
-.metric-badge.caution{ color:var(--caution); }
-.metric-badge.danger { color:var(--danger); }
+.metric-badge.safe  { color:var(--safe-text); }
+.metric-badge.caution{ color:var(--caution-text); }
+.metric-badge.danger { color:var(--danger-text); }
 
 /* WBGT Station row */
 .card-station{
@@ -419,8 +600,8 @@ html,body{
 <div class="data-bar">
   <div class="data-bar-inner">
     <div class="data-pill">Last refresh <span id="pill-refresh">—</span></div>
+    <div class="data-pill">Island-wide C2G Lightning (30 min) <span id="pill-lightning">—</span></div>
     <div class="data-pill">WBGT Stations <span id="pill-wbgt">—</span></div>
-    <div class="data-pill">Lightning (30 min) <span id="pill-lightning">—</span></div>
     <div class="data-pill">PSI <span id="pill-psi">—</span></div>
     <div class="status-pill" id="status-msg">Loading…</div>
   </div>
@@ -686,6 +867,26 @@ function buildCards(){
           '<div class="card-status-badge" id="csb-'+c.id+'">Loading</div>'+
         '</div>'+
         '<div class="card-metrics">'+
+          '<div class="card-divider">'+
+            '<span class="card-divider-label">⚡ Lightning Alert (within 6 km)</span>'+
+            '<span class="info-icon" tabindex="0">i'+
+              '<span class="tooltip">'+
+                '<strong>Cloud-to-Ground (C2G)</strong> — electrical discharges between cloud and ground. The more dangerous type.<br><br>'+
+                '<strong>Cloud-to-Cloud (C2C)</strong> — discharges within or between clouds. Usually, but not always, a precursor to C2G.<br><br>'+
+                'Most lightning occurs within 5–6 km of a storm. Strikes from a storm &gt;10 km away can still affect this location. <em>Source: NEA / MSS LIS</em>'+
+              '</span>'+
+            '</span>'+
+          '</div>'+
+          '<div class="metric">'+
+            '<div class="metric-label">Cloud-to-Ground</div>'+
+            '<div class="metric-value" id="lgv-'+c.id+'">—</div>'+
+            '<span class="metric-badge" id="lgb-'+c.id+'">—</span>'+
+          '</div>'+
+          '<div class="metric">'+
+            '<div class="metric-label">Cloud-to-Cloud</div>'+
+            '<div class="metric-value" id="lcv-'+c.id+'">—</div>'+
+            '<span class="metric-badge" id="lcb-'+c.id+'">—</span>'+
+          '</div>'+
           '<div class="metric">'+
             '<div class="metric-label">WBGT</div>'+
             '<div class="metric-value" id="wv-'+c.id+'">—</div>'+
@@ -695,16 +896,6 @@ function buildCards(){
             '<div class="metric-label">PSI</div>'+
             '<div class="metric-value" id="pv-'+c.id+'">—</div>'+
             '<span class="metric-badge" id="pb-'+c.id+'">—</span>'+
-          '</div>'+
-          '<div class="metric">'+
-            '<div class="metric-label">Cloud-to-Ground ⚡</div>'+
-            '<div class="metric-value" id="lgv-'+c.id+'">—</div>'+
-            '<span class="metric-badge" id="lgb-'+c.id+'">—</span>'+
-          '</div>'+
-          '<div class="metric">'+
-            '<div class="metric-label">Cloud-to-Cloud ☁</div>'+
-            '<div class="metric-value" id="lcv-'+c.id+'">—</div>'+
-            '<span class="metric-badge" id="lcb-'+c.id+'">—</span>'+
           '</div>'+
         '</div>'+
         '<div class="card-timeline" id="tl-'+c.id+'">'+
@@ -843,10 +1034,8 @@ function refresh(){
     document.getElementById("pill-wbgt").textContent=dataState.wbgtStations.length+" live";
     document.getElementById("pill-lightning").textContent=(function(){
       var cutoff=new Date(Date.now()-30*60*1000);
-      var recent=dataState.strikes.filter(function(s){return s.time&&s.time>=cutoff;});
-      var g=recent.filter(function(s){return s.type==="G";}).length;
-      var c=recent.filter(function(s){return s.type==="C";}).length;
-      return "G:"+g+" C:"+c;
+      var g=dataState.strikes.filter(function(s){return s.time&&s.time>=cutoff&&s.type==="G";}).length;
+      return g+" strikes";
     })();
     document.getElementById("pill-psi").textContent=dataState.psiParsed.regions.length+" regions";
     document.getElementById("pill-refresh").textContent=new Date().toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit"});
@@ -865,10 +1054,8 @@ function refreshLightning(){
     updateAllCards();
     (function(){
       var cutoff=new Date(Date.now()-30*60*1000);
-      var recent=dataState.strikes.filter(function(s){return s.time&&s.time>=cutoff;});
-      var g=recent.filter(function(s){return s.type==="G";}).length;
-      var c=recent.filter(function(s){return s.type==="C";}).length;
-      document.getElementById("pill-lightning").textContent="G:"+g+" C:"+c;
+      var g=dataState.strikes.filter(function(s){return s.time&&s.time>=cutoff&&s.type==="G";}).length;
+      document.getElementById("pill-lightning").textContent=g+" strikes";
     })();
   }).catch(function(){});
 }
@@ -877,6 +1064,57 @@ buildCards();
 refresh();
 setInterval(refresh, REFRESH_MS);
 setInterval(refreshLightning, LIGHTNING_REFRESH_MS);
+
+// Mobile tap + desktop click support for info icon tooltips.
+// Tooltip uses position:fixed to escape card overflow:hidden clipping.
+// JS positions it relative to the icon's screen coordinates.
+function positionTooltip(icon){
+  var tooltip = icon.querySelector(".tooltip");
+  if(!tooltip) return;
+  var rect = icon.getBoundingClientRect();
+  var tooltipW = 280;
+  var gap = 8;
+  // Position above the icon
+  var top = rect.top - gap;
+  var left = rect.left + (rect.width / 2) - (tooltipW / 2);
+  // Keep within viewport horizontally
+  var vw = window.innerWidth;
+  if(left < 8) left = 8;
+  if(left + tooltipW > vw - 8) left = vw - tooltipW - 8;
+  // If not enough room above, position below instead
+  if(top - 120 < 0){
+    tooltip.style.top = (rect.bottom + gap) + "px";
+    tooltip.style.bottom = "auto";
+    // flip the arrow
+    tooltip.style.setProperty("--arrow-top", "-10px");
+  } else {
+    tooltip.style.top = "auto";
+    tooltip.style.bottom = (window.innerHeight - rect.top + gap) + "px";
+  }
+  tooltip.style.left = left + "px";
+  tooltip.style.width = tooltipW + "px";
+}
+
+document.addEventListener("click", function(e){
+  var icon = e.target.closest(".info-icon");
+  if(icon){
+    e.stopPropagation();
+    var isActive = icon.classList.contains("active");
+    document.querySelectorAll(".info-icon.active").forEach(function(el){ el.classList.remove("active"); });
+    if(!isActive){
+      icon.classList.add("active");
+      positionTooltip(icon);
+    }
+    return;
+  }
+  document.querySelectorAll(".info-icon.active").forEach(function(el){ el.classList.remove("active"); });
+});
+
+// Desktop: reposition on hover in case of scroll
+document.addEventListener("mouseover", function(e){
+  var icon = e.target.closest(".info-icon");
+  if(icon) positionTooltip(icon);
+});
 
 })();
 </script>
