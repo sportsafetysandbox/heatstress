@@ -573,6 +573,63 @@ html,body{
   font-weight:700;
   font-size:12px;
 }
+
+/* Crowd row */
+.card-crowd{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  border-top:1px solid var(--line);
+}
+.crowd-cell{
+  padding:8px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.crowd-cell+.crowd-cell{ border-left:1px solid var(--line); }
+.crowd-label{
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-dimmer);
+}
+.crowd-bar-wrap{
+  height:6px;
+  background:var(--line);
+  border-radius:3px;
+  overflow:hidden;
+}
+.crowd-bar-fill{
+  height:100%;
+  border-radius:3px;
+  background:var(--safe);
+  transition:width 0.6s ease, background 0.4s ease;
+}
+.crowd-bar-fill.pct-mod { background:var(--caution); }
+.crowd-bar-fill.pct-high{ background:var(--danger); }
+.crowd-pct{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:13px;
+  color:var(--text-dim);
+  line-height:1;
+}
+.crowd-pct.pct-mod { color:var(--caution-text,var(--caution)); }
+.crowd-pct.pct-high{ color:var(--danger-text,var(--danger)); }
+.crowd-status{
+  font-size:9px;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  color:var(--text-dimmer);
+}
+/* Override text colours inside coloured cards */
+.st-safe .crowd-label,.st-caution .crowd-label,.st-danger .crowd-label{ color:rgba(0,0,0,0.55); }
+.st-safe .crowd-pct,.st-caution .crowd-pct,.st-danger .crowd-pct{ color:#000; }
+.st-safe .crowd-status,.st-caution .crowd-status,.st-danger .crowd-status{ color:rgba(0,0,0,0.5); }
+.st-safe .crowd-bar-wrap,.st-caution .crowd-bar-wrap,.st-danger .crowd-bar-wrap{ background:rgba(0,0,0,0.15); }
+.st-safe .crowd-cell,.st-caution .crowd-cell,.st-danger .crowd-cell{ border-color:rgba(255,255,255,0.6); }
+.st-safe .card-crowd,.st-caution .card-crowd,.st-danger .card-crowd{ border-color:rgba(255,255,255,0.6); }
 </style>
 </head>
 <body>
@@ -682,36 +739,36 @@ var LIGHTNING_RADIUS_KM = 6;
 // 22 ActiveSG Sport Centres — coordinates verified via Google Places
 var ZONES = {
   north: [
-    { id:"yishun",        name:"Yishun",         lat:1.4121111, lon:103.8313335 },
-    { id:"bukitcanberra", name:"Bukit Canberra",  lat:1.4488728, lon:103.8239457 },
-    { id:"woodlands",     name:"Woodlands",       lat:1.434104,  lon:103.779798  },
-    { id:"yiochukang",    name:"Yio Chu Kang",    lat:1.3822319, lon:103.845925  },
+    { id:"yishun",        name:"Yishun",         lat:1.4121111, lon:103.8313335, gymId:"qviBYrXilEFGYDVVYfPnv", poolId:"L4e3n8Ji9rWu9hNp0zFMN" },
+    { id:"bukitcanberra", name:"Bukit Canberra",  lat:1.4488728, lon:103.8239457, gymId:"kvKdTkljhfoINMtsxkLwR", poolId:"ga7tcm5EtMhenIoFyUCdK" },
+    { id:"woodlands",     name:"Woodlands",       lat:1.434104,  lon:103.779798,  gymId:"TiF3sxcMcm4cW9xIBJUdU", poolId:"vUb2SFegSiKgZD18Ho5Lz" },
+    { id:"yiochukang",    name:"Yio Chu Kang",    lat:1.3822319, lon:103.845925,  gymId:"KH03YTUfcQ1MJP7a0mvKs", poolId:"ghW6bagAMqu9U6vRhvo4n" },
   ],
   northeast: [
-    { id:"bishan",    name:"Bishan",     lat:1.3555048, lon:103.8509503 },
-    { id:"hougang",   name:"Hougang",    lat:1.3706138, lon:103.8885266 },
-    { id:"sengkang",  name:"Sengkang",   lat:1.3967848, lon:103.886901  },
-    { id:"serangoon", name:"Serangoon",  lat:1.3570514, lon:103.8746748 },
-    { id:"punggol",   name:"Punggol",    lat:1.4084829, lon:103.9067354 },
+    { id:"bishan",    name:"Bishan",     lat:1.3555048, lon:103.8509503, gymId:"FrQe2ueU3hIaPAAh8snYW", poolId:"4hUzT1YgUrRkhgBzBAewV" },
+    { id:"hougang",   name:"Hougang",    lat:1.3706138, lon:103.8885266, gymId:"XcptrxSXxwEMzzOdhC4e8", poolId:"ENq6LYnuWO6WhORMJO485" },
+    { id:"sengkang",  name:"Sengkang",   lat:1.3967848, lon:103.886901,  gymId:"oGyEo8DlMkhqGwHAHyrX2", poolId:"qWpr2PjU25Bx5nxaS7bQz" },
+    { id:"serangoon", name:"Serangoon",  lat:1.3570514, lon:103.8746748, gymId:null,                    poolId:"VWuTPEZQyi0XOUjk718AK" },
+    { id:"punggol",   name:"Punggol",    lat:1.4084829, lon:103.9067354, gymId:null,                    poolId:null },
   ],
   west: [
-    { id:"bukitgombak", name:"Bukit Gombak",  lat:1.359667,  lon:103.752228  },
-    { id:"cck",         name:"Choa Chu Kang", lat:1.3910172, lon:103.7482599 },
-    { id:"jurongeast",  name:"Jurong East",   lat:1.346998,  lon:103.729109  },
-    { id:"jurongwest",  name:"Jurong West",   lat:1.3378059, lon:103.6941925 },
+    { id:"bukitgombak", name:"Bukit Gombak",  lat:1.359667,  lon:103.752228,  gymId:"rSfmQ2HygLUCIJZ4YBXhZ", poolId:"ucPWbriSLH4BD9Mh7NwMr" },
+    { id:"cck",         name:"Choa Chu Kang", lat:1.3910172, lon:103.7482599, gymId:"hU7dxBlZvxIP6xF1sBF4g", poolId:"O6ECuPYi2tvFVz1qK9X9P" },
+    { id:"jurongeast",  name:"Jurong East",   lat:1.346998,  lon:103.729109,  gymId:"FOoCS3RzGgcLYcRzdOFV1", poolId:"JUUA8alpdkQnQ6fZ4uEGX" },
+    { id:"jurongwest",  name:"Jurong West",   lat:1.3378059, lon:103.6941925, gymId:"g0lI2vG0BmhF1GlIkjS89", poolId:"WOXhXXUhhOix2iBIalqpT" },
   ],
   central: [
-    { id:"delta",     name:"Delta",        lat:1.2891624, lon:103.8200350 },
-    { id:"queenstown",name:"Queenstown",   lat:1.2969489, lon:103.8028823 },
-    { id:"clementi",  name:"Clementi",     lat:1.3110740, lon:103.765017  },
-    { id:"jalanbesar",name:"Jalan Besar",  lat:1.3104768, lon:103.8595381 },
-    { id:"toapayoh",  name:"Toa Payoh",    lat:1.3376708, lon:103.8448689 },
+    { id:"delta",     name:"Delta",        lat:1.2891624, lon:103.8200350, gymId:"kWpNPgv8vJ7oY5hM0EGBj", poolId:"dgGQj8QwiwGZkDv3zimSQ" },
+    { id:"queenstown",name:"Queenstown",   lat:1.2969489, lon:103.8028823, gymId:"YKBc0sPBiEXAbxLxiVjyN", poolId:"dBZ4WS2bTgRsxJdmp19lq" },
+    { id:"clementi",  name:"Clementi",     lat:1.3110740, lon:103.765017,  gymId:"EcBGtBDRSadwhso2WV0Tk", poolId:"NH0t03MoX19tdvAXm2RT1" },
+    { id:"jalanbesar",name:"Jalan Besar",  lat:1.3104768, lon:103.8595381, gymId:"RF0gfHIWDuNybfYfPOZgU", poolId:"zJzNmXmFIOyqdgsWsI2gr" },
+    { id:"toapayoh",  name:"Toa Payoh",    lat:1.3376708, lon:103.8448689, gymId:"mTU4h0cnQo7ZfHBye4laR", poolId:null },
   ],
   east: [
-    { id:"bedok",    name:"Heartbeat @ Bedok", lat:1.3269164, lon:103.9321636 },
-    { id:"kallang",  name:"Kallang",           lat:1.3054235, lon:103.8795557 },
-    { id:"pasirris", name:"Pasir Ris",         lat:1.3740237, lon:103.9514946 },
-    { id:"tampines", name:"Tampines",          lat:1.3536977, lon:103.9407675 },
+    { id:"bedok",    name:"Heartbeat @ Bedok", lat:1.3269164, lon:103.9321636, gymId:"CdGlAWLw4cIllzFlL2be0", poolId:"kkDza1o5jQn0txRAPZ0xN" },
+    { id:"kallang",  name:"Kallang",           lat:1.3054235, lon:103.8795557, gymId:null,                    poolId:null },
+    { id:"pasirris", name:"Pasir Ris",         lat:1.3740237, lon:103.9514946, gymId:"VmxAr3EQGMZoRolZZVByz", poolId:"KMiRWFS7WVcl5uMyQHDmn" },
+    { id:"tampines", name:"Tampines",          lat:1.3536977, lon:103.9407675, gymId:"qBwKt6mp7ouMiEuoQHyrX", poolId:"sd7mblETwpyZjsUE8DGqX" },
   ]
 };
 
@@ -900,6 +957,20 @@ function buildCards(){
         '</div>'+
         '<div class="card-timeline" id="tl-'+c.id+'">'+
         '</div>'+
+        '<div class="card-crowd">'+
+          '<div class="crowd-cell">'+
+            '<div class="crowd-label">🏋 Gym</div>'+
+            '<div class="crowd-bar-wrap"><div class="crowd-bar-fill" id="gbf-'+c.id+'" style="width:0%"></div></div>'+
+            '<div class="crowd-pct" id="gpct-'+c.id+'">'+(c.gymId?'—':'N/A')+'</div>'+
+            '<div class="crowd-status" id="gsts-'+c.id+'">'+(c.gymId?'Loading':'No gantry data')+'</div>'+
+          '</div>'+
+          '<div class="crowd-cell">'+
+            '<div class="crowd-label">🏊 Pool</div>'+
+            '<div class="crowd-bar-wrap"><div class="crowd-bar-fill" id="pbf-'+c.id+'" style="width:0%"></div></div>'+
+            '<div class="crowd-pct" id="ppct-'+c.id+'">'+(c.poolId?'—':'N/A')+'</div>'+
+            '<div class="crowd-status" id="psts-'+c.id+'">'+(c.poolId?'Loading':'No gantry data')+'</div>'+
+          '</div>'+
+        '</div>'+
         '<div class="card-foot">'+
           '<span class="card-foot-label">Last 3 hours · WBGT</span>'+
           '<span class="card-foot-station" id="cf-'+c.id+'">—</span>'+
@@ -990,7 +1061,66 @@ function renderCard(centre, wbgt, lightning, psiVal, history){
 }
 
 // ---------- DATA STATE ----------
-var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}} };
+var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}}, crowd:{} };
+
+// ---------- CROWD ----------
+var CROWD_URL = "https://activesg.gov.sg/api/trpc/pass.getFacilityCapacities?input=%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D";
+var CROWD_REFRESH_MS = 3 * 60 * 1000; // 3-min refresh
+
+function fetchCrowd(){
+  return fetch(CROWD_URL)
+    .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+    .then(function(json){
+      var data = (json&&json.result&&json.result.data&&json.result.data.json)||{};
+      var lookup = {};
+      ((data.gymFacilities)||[]).forEach(function(f){ lookup[f.id]=f; });
+      ((data.swimFacilities)||[]).forEach(function(f){ lookup[f.id]=f; });
+      dataState.crowd = lookup;
+      updateCrowdCards();
+    }).catch(function(e){ console.warn("Crowd fetch failed:", e.message); });
+}
+
+function crowdClass(pct){
+  return pct >= 75 ? "pct-high" : pct >= 50 ? "pct-mod" : "";
+}
+
+function renderCrowdCell(centreId, prefix, facilityId){
+  var pctEl  = document.getElementById(prefix+"pct-"+centreId);
+  var stsEl  = document.getElementById(prefix+"sts-"+centreId);
+  var barEl  = document.getElementById(prefix+"bf-"+centreId);
+  if(!pctEl||!stsEl||!barEl) return;
+  if(!facilityId){
+    pctEl.textContent="N/A"; stsEl.textContent="No gantry data";
+    barEl.style.width="0%"; barEl.className="crowd-bar-fill";
+    return;
+  }
+  var f = dataState.crowd[facilityId];
+  if(!f){
+    pctEl.textContent="—"; stsEl.textContent="No data";
+    barEl.style.width="0%"; return;
+  }
+  if(f.isClosed){
+    pctEl.textContent="Closed"; pctEl.className="crowd-pct";
+    stsEl.textContent="Facility closed";
+    barEl.style.width="0%"; barEl.className="crowd-bar-fill"; return;
+  }
+  var pct = f.capacityPercentage||0;
+  var cls = crowdClass(pct);
+  pctEl.textContent = pct+"%";
+  pctEl.className = "crowd-pct"+(cls?" "+cls:"");
+  stsEl.textContent = pct>=75?"Busy":pct>=50?"Moderate":"Quiet";
+  barEl.style.width = pct+"%";
+  barEl.className = "crowd-bar-fill"+(cls?" "+cls:"");
+}
+
+function updateCrowdCards(){
+  var allCentres=Object.values(ZONES).reduce(function(a,b){return a.concat(b);});
+  allCentres.forEach(function(c){
+    renderCrowdCell(c.id, "g", c.gymId);
+    renderCrowdCell(c.id, "p", c.poolId);
+  });
+}
+
 
 function updateAllCards(){
   var allCentres=Object.values(ZONES).reduce(function(a,b){return a.concat(b);});
@@ -1062,8 +1192,10 @@ function refreshLightning(){
 
 buildCards();
 refresh();
+fetchCrowd();
 setInterval(refresh, REFRESH_MS);
 setInterval(refreshLightning, LIGHTNING_REFRESH_MS);
+setInterval(fetchCrowd, CROWD_REFRESH_MS);
 
 // Mobile tap + desktop click support for info icon tooltips.
 // Tooltip uses position:fixed to escape card overflow:hidden clipping.
