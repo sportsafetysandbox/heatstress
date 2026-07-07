@@ -585,6 +585,7 @@ html,body{
   display:flex;
   flex-direction:column;
   gap:4px;
+  background:#fff;
 }
 .crowd-cell+.crowd-cell{ border-left:1px solid var(--line); }
 .crowd-label{
@@ -623,13 +624,25 @@ html,body{
   text-transform:uppercase;
   color:var(--text-dimmer);
 }
-/* Override text colours inside coloured cards */
-.st-safe .crowd-label,.st-caution .crowd-label,.st-danger .crowd-label{ color:rgba(0,0,0,0.55); }
-.st-safe .crowd-pct,.st-caution .crowd-pct,.st-danger .crowd-pct{ color:#000; }
-.st-safe .crowd-status,.st-caution .crowd-status,.st-danger .crowd-status{ color:rgba(0,0,0,0.5); }
-.st-safe .crowd-bar-wrap,.st-caution .crowd-bar-wrap,.st-danger .crowd-bar-wrap{ background:rgba(0,0,0,0.15); }
-.st-safe .crowd-cell,.st-caution .crowd-cell,.st-danger .crowd-cell{ border-color:rgba(255,255,255,0.6); }
-.st-safe .card-crowd,.st-caution .card-crowd,.st-danger .card-crowd{ border-color:rgba(255,255,255,0.6); }
+/* Crowd cells always white — override coloured card backgrounds */
+.st-safe .crowd-cell,
+.st-caution .crowd-cell,
+.st-danger .crowd-cell{ background:#fff; border-color:rgba(0,0,0,0.08); }
+.st-safe .card-crowd,
+.st-caution .card-crowd,
+.st-danger .card-crowd{ border-color:rgba(0,0,0,0.1); }
+.st-safe .crowd-label,
+.st-caution .crowd-label,
+.st-danger .crowd-label{ color:var(--text-dimmer); }
+.st-safe .crowd-pct,
+.st-caution .crowd-pct,
+.st-danger .crowd-pct{ color:var(--text-dim); }
+.st-safe .crowd-status,
+.st-caution .crowd-status,
+.st-danger .crowd-status{ color:var(--text-dimmer); }
+.st-safe .crowd-bar-wrap,
+.st-caution .crowd-bar-wrap,
+.st-danger .crowd-bar-wrap{ background:var(--line); }
 </style>
 </head>
 <body>
