@@ -1070,11 +1070,16 @@ function fetchCrowd(){
   return fetch(PROXY + "?api=crowd")
     .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
     .then(function(json){
-      var data = (json&&json.result&&json.result.data&&json.result.data.json)||{};
+      // R2 shape: { updatedAt, data: { result: { data: { json: { gymFacilities, swimFacilities } } } } }
+      // Fallback to direct shape in case scraper stores raw response
+      var inner = (json&&json.data)||json;
+      var facilities = (inner&&inner.result&&inner.result.data&&inner.result.data.json)||
+                       (inner&&inner.result&&inner.result.data)||{};
       var lookup = {};
-      ((data.gymFacilities)||[]).forEach(function(f){ lookup[f.id]=f; });
-      ((data.swimFacilities)||[]).forEach(function(f){ lookup[f.id]=f; });
+      ((facilities.gymFacilities)||[]).forEach(function(f){ lookup[f.id]=f; });
+      ((facilities.swimFacilities)||[]).forEach(function(f){ lookup[f.id]=f; });
       dataState.crowd = lookup;
+      dataState.crowdUpdatedAt = json.updatedAt||null;
       updateCrowdCards();
     }).catch(function(e){ console.warn("Crowd fetch failed:", e.message); });
 }
