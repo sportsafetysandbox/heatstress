@@ -179,6 +179,15 @@ h1,h2,h3,.num,.label-cond{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-seri
 .mini-value.alert{color:var(--high);}
 .mini-value.clear{color:var(--low);}
 .mini-sub{font-size:11px; color:var(--paper-dim); margin-top:4px;}
+.lightning-split{display:flex; gap:8px; margin-top:6px;}
+.lightning-col{flex:1;}
+.lightning-count{
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; font-size:30px; font-weight:700; line-height:1;
+  color:var(--paper-dim); transition:color .3s ease;
+}
+.lightning-count.active-cg{color:var(--high);}
+.lightning-count.active-cc{color:var(--mod);}
+.lightning-type-label{font-size:9.5px; letter-spacing:0.6px; color:var(--paper-dim); text-transform:uppercase; margin-top:2px;}
 .mini-advice{
   font-size:11px; line-height:1.4; margin-top:8px; padding-top:8px;
   border-top:1px dashed var(--line); color:var(--paper-dim); display:none;
@@ -379,8 +388,17 @@ h1,h2,h3,.num,.label-cond{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-seri
 
     <div class="mini-row">
       <div class="mini-card">
-        <div class="mini-label">⚡ Lightning</div>
-        <div class="mini-value" id="lightningValue">…</div>
+        <div class="mini-label">⚡ Lightning · last 30 min, 6km</div>
+        <div class="lightning-split">
+          <div class="lightning-col">
+            <div class="lightning-count" id="lightningCG">–</div>
+            <div class="lightning-type-label">Cloud–Ground</div>
+          </div>
+          <div class="lightning-col">
+            <div class="lightning-count" id="lightningCC">–</div>
+            <div class="lightning-type-label">Cloud–Cloud</div>
+          </div>
+        </div>
         <div class="mini-sub" id="lightningSub">Checking nearby strikes</div>
         <div class="mini-advice" id="lightningAdvice"></div>
       </div>
@@ -1022,23 +1040,37 @@ function escapeHtml(str){
 /* ============================================================
    RENDER: lightning / PSI mini cards
    ============================================================ */
-function renderLightningState(state, detail){
-  var val = document.getElementById('lightningValue');
+function renderLightningState(state, data){
+  var cg = document.getElementById('lightningCG');
+  var cc = document.getElementById('lightningCC');
   var sub = document.getElementById('lightningSub');
   var advice = document.getElementById('lightningAdvice');
-  val.classList.remove('alert','clear');
+  cg.classList.remove('active-cg');
+  cc.classList.remove('active-cc');
   advice.classList.remove('show','alert','caution');
   advice.textContent = '';
 
-  if(state === 'loading'){ val.textContent='…'; sub.textContent='Checking nearby strikes'; }
-  else if(state === 'alert'){
-    val.textContent='Alert'; val.classList.add('alert');
-    sub.textContent = detail || 'Strikes within 6km';
-    advice.textContent = LIGHTNING_ADVICE;
-    advice.classList.add('show','alert');
+  if(state === 'loading'){
+    cg.textContent = '–'; cc.textContent = '–';
+    sub.textContent = 'Checking nearby strikes';
+  } else if(state === 'reading'){
+    cg.textContent = data.cgCount;
+    cc.textContent = data.ccCount;
+    if(data.cgCount > 0) cg.classList.add('active-cg');
+    if(data.ccCount > 0) cc.classList.add('active-cc');
+
+    if(data.cgCount > 0 || data.ccCount > 0){
+      var total = data.cgCount + data.ccCount;
+      sub.textContent = total + ' strike' + (total>1?'s':'') + ' within ' + LIGHTNING_RADIUS_KM + 'km, last ' + LIGHTNING_WINDOW_MIN + ' min';
+      advice.textContent = LIGHTNING_ADVICE;
+      advice.classList.add('show','alert');
+    } else {
+      sub.textContent = 'No strikes within ' + LIGHTNING_RADIUS_KM + 'km';
+    }
+  } else {
+    cg.textContent = '—'; cc.textContent = '—';
+    sub.textContent = 'Unavailable';
   }
-  else if(state === 'clear'){ val.textContent='Clear'; val.classList.add('clear'); sub.textContent=detail || 'No strikes within 6km'; }
-  else { val.textContent='—'; sub.textContent='Unavailable'; }
 }
 function renderPSIState(state, value, band, regionName){
   var val = document.getElementById('psiValue');
@@ -1065,11 +1097,9 @@ async function loadLightningStatus(lat, lon){
     var json = await fetchLightning();
     var strikes = parseLightning(json);
     var nearby = findNearbyLightning(strikes, lat, lon, LIGHTNING_RADIUS_KM);
-    if(nearby.length){
-      renderLightningState('alert', nearby.length + ' strike' + (nearby.length>1?'s':'') + ' within ' + LIGHTNING_RADIUS_KM + 'km');
-    }else{
-      renderLightningState('clear', 'No strikes within ' + LIGHTNING_RADIUS_KM + 'km');
-    }
+    var cgCount = nearby.filter(function(s){ return s.type === 'G'; }).length;
+    var ccCount = nearby.filter(function(s){ return s.type === 'C'; }).length;
+    renderLightningState('reading', { cgCount: cgCount, ccCount: ccCount });
   }catch(e){
     renderLightningState('error');
   }
