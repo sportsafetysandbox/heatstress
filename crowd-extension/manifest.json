@@ -4,7 +4,8 @@
   "version": "1.0",
   "description": "Fetches ActiveSG gym and pool crowd data for the HEAT/SG dashboard.",
   "permissions": [
-    "alarms"
+    "alarms",
+    "storage"
   ],
   "host_permissions": [
     "https://activesg.gov.sg/*",
