@@ -256,6 +256,36 @@
     transition: background 0.4s ease;
   }
 
+  .lightning-split{
+    display:flex;
+    justify-content:center;
+    gap:16px;
+  }
+  .lightning-stat{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .lightning-stat-value{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:800;
+    font-size:26px;
+    line-height:1;
+    color:var(--paper);
+    letter-spacing:-0.01em;
+    transition: color 0.4s ease;
+  }
+  .lightning-stat-label{
+    font-size:9px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--paper-dim);
+    margin-top:3px;
+    opacity:0.75;
+  }
+  .mini-reading.is-alert .lightning-stat-value.is-hit{ color:var(--high); }
+  .mini-reading.is-clear .lightning-stat-value{ color:var(--low); }
+
   .mini-reading.is-alert .mini-reading-value{ color:var(--high); }
   .mini-reading.is-alert .mini-status-tag{
     background:var(--high-dim);
@@ -609,7 +639,16 @@
     <div class="mini-reading-row">
       <div class="mini-reading" id="lightning-card">
         <div class="mini-reading-label">Lightning</div>
-        <div class="mini-reading-value" id="lightning-title">—</div>
+        <div class="lightning-split">
+          <div class="lightning-stat">
+            <div class="lightning-stat-value" id="lightning-c2c">—</div>
+            <div class="lightning-stat-label">C2C</div>
+          </div>
+          <div class="lightning-stat">
+            <div class="lightning-stat-value" id="lightning-c2g">—</div>
+            <div class="lightning-stat-label">C2G</div>
+          </div>
+        </div>
         <div class="mini-status-tag" id="lightning-tag">
           <span class="mini-status-dot"></span>
           <span id="lightning-sub">—</span>
@@ -1479,35 +1518,55 @@
       });
   }
 
-  var LIGHTNING_RADIUS_KM = 6;
+  var LIGHTNING_RADIUS_KM = 8;
   // ^ NEA: most lightning strokes occur within 5-6km of a thunderstorm
-  //   cloud — this matches their own published safety guidance.
+  //   cloud, but an 8km radius gives a bit more advance warning.
   var lastKnownLocation = null; // cached so the faster lightning-only refresh can reuse it
 
-  function renderLightningState(state, detail){
+  function renderLightningState(state, nearby, detail){
     var card = document.getElementById("lightning-card");
-    var title = document.getElementById("lightning-title");
     var sub = document.getElementById("lightning-sub");
     var tag = document.getElementById("lightning-tag");
+    var c2cEl = document.getElementById("lightning-c2c");
+    var c2gEl = document.getElementById("lightning-c2g");
 
     card.classList.remove("is-alert", "is-clear");
+    c2cEl.classList.remove("is-hit");
+    c2gEl.classList.remove("is-hit");
     tag.removeAttribute("title");
 
-    if(state === "alert"){
-      card.classList.add("is-alert");
-      title.textContent = "Alert";
-      sub.textContent = "Risk nearby";
-      tag.title = detail;
-    } else if(state === "clear"){
-      card.classList.add("is-clear");
-      title.textContent = "Clear";
-      sub.textContent = "None within " + LIGHTNING_RADIUS_KM + "km";
+    if(state === "reading"){
+      var c2c = nearby.filter(function(s){ return s.type !== "G"; }).length;
+      var c2g = nearby.filter(function(s){ return s.type === "G"; }).length;
+      c2cEl.textContent = c2c;
+      c2gEl.textContent = c2g;
+
+      if(c2g > 0 || c2c > 0){
+        card.classList.add("is-alert");
+        if(c2c > 0) c2cEl.classList.add("is-hit");
+        if(c2g > 0) c2gEl.classList.add("is-hit");
+        sub.textContent = c2g > 0 ? "Ground strikes nearby" : "Cloud strikes nearby";
+      } else {
+        card.classList.add("is-clear");
+        sub.textContent = "None within " + LIGHTNING_RADIUS_KM + "km";
+      }
+
+      if(nearby.length){
+        var closest = nearby[0];
+        var distLabel = closest.distanceKm < 1
+          ? Math.round(closest.distanceKm * 1000) + " m"
+          : closest.distanceKm.toFixed(1) + " km";
+        tag.title = detail || (nearby.length + " strike" + (nearby.length > 1 ? "s" : "") +
+          " detected within " + LIGHTNING_RADIUS_KM + "km — nearest " + distLabel + ". Consider moving indoors.");
+      }
     } else if(state === "error"){
-      title.textContent = "—";
+      c2cEl.textContent = "—";
+      c2gEl.textContent = "—";
       sub.textContent = "Unavailable";
       tag.title = detail || "Couldn't load lightning data right now.";
     } else {
-      title.textContent = "—";
+      c2cEl.textContent = "—";
+      c2gEl.textContent = "—";
       sub.textContent = "Checking…";
     }
   }
@@ -1524,21 +1583,10 @@
         var cutoff = new Date(Date.now() - 30 * 60 * 1000);
         var recent = strikes.filter(function(s){ return s.time && s.time >= cutoff; });
         var nearby = findNearbyLightning(recent, lat, lon, LIGHTNING_RADIUS_KM);
-
-        if(nearby.length){
-          var closest = nearby[0];
-          var distLabel = closest.distanceKm < 1
-            ? Math.round(closest.distanceKm * 1000) + " m"
-            : closest.distanceKm.toFixed(1) + " km";
-          var typeLabel = closest.type === "G" ? "cloud-to-ground" : "cloud-to-cloud";
-          renderLightningState("alert",
-            nearby.length + " strike" + (nearby.length > 1 ? "s" : "") + " detected within " + LIGHTNING_RADIUS_KM + "km — nearest " + distLabel + " (" + typeLabel + "). Consider moving indoors.");
-        } else {
-          renderLightningState("clear");
-        }
+        renderLightningState("reading", nearby);
       })
       .catch(function(err){
-        renderLightningState("error", err.message);
+        renderLightningState("error", null, err.message);
       });
   }
 
