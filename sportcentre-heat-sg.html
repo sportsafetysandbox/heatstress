@@ -747,7 +747,7 @@ html,body{
 var PROXY = "https://wbgt-proxy.ryhanhusainni.workers.dev/";
 var REFRESH_MS = 5 * 60 * 1000;
 var LIGHTNING_REFRESH_MS = 2 * 60 * 1000;
-var LIGHTNING_RADIUS_KM = 6;
+var LIGHTNING_RADIUS_KM = 8;
 
 // 22 ActiveSG Sport Centres — coordinates verified via Google Places
 var ZONES = {
@@ -952,12 +952,12 @@ function buildCards(){
         '</div>'+
         '<div class="card-metrics">'+
           '<div class="card-divider">'+
-            '<span class="card-divider-label">⚡ Lightning Alert (within 6 km)</span>'+
+            '<span class="card-divider-label">⚡ Lightning Alert (within 8 km)</span>'+
             '<span class="info-icon" tabindex="0">i'+
               '<span class="tooltip">'+
                 '<strong>Cloud-to-Ground (C2G)</strong> — electrical discharges between cloud and ground. The more dangerous type.<br><br>'+
                 '<strong>Cloud-to-Cloud (C2C)</strong> — discharges within or between clouds. Usually, but not always, a precursor to C2G.<br><br>'+
-                'Most lightning occurs within 5–6 km of a storm. Strikes from a storm &gt;10 km away can still affect this location. <em>Source: NEA / MSS LIS</em>'+
+                'Most lightning occurs within 5–8 km of a storm. Strikes from a storm &gt;10 km away can still affect this location. <em>Source: NEA / MSS LIS</em>'+
               '</span>'+
             '</span>'+
           '</div>'+
@@ -1049,13 +1049,13 @@ function renderCard(centre, wbgt, lightning, psiVal, history){
   var lgv=document.getElementById("lgv-"+centre.id), lgb=document.getElementById("lgb-"+centre.id);
   var gAlert=lightning.g.length>0;
   if(lgv){ lgv.textContent=gAlert?lightning.g.length:"✓"; lgv.className="metric-value"+(gAlert?" danger":" safe"); lgv.style.fontSize="22px"; lgv.style.lineHeight="1.3"; }
-  if(lgb){ lgb.textContent=gAlert?lightning.g.length+" within 6km":"Clear"; lgb.className="metric-badge"+(gAlert?" danger":" safe"); }
+  if(lgb){ lgb.textContent=gAlert?lightning.g.length+" within 8km":"Clear"; lgb.className="metric-badge"+(gAlert?" danger":" safe"); }
 
   // Cloud-to-Cloud lightning
   var lcv=document.getElementById("lcv-"+centre.id), lcb=document.getElementById("lcb-"+centre.id);
   var cAlert=lightning.c.length>0;
   if(lcv){ lcv.textContent=cAlert?lightning.c.length:"✓"; lcv.className="metric-value"+(cAlert?" caution":" safe"); lcv.style.fontSize="22px"; lcv.style.lineHeight="1.3"; }
-  if(lcb){ lcb.textContent=cAlert?lightning.c.length+" within 6km":"Clear"; lcb.className="metric-badge"+(cAlert?" caution":" safe"); }
+  if(lcb){ lcb.textContent=cAlert?lightning.c.length+" within 8km":"Clear"; lcb.className="metric-badge"+(cAlert?" caution":" safe"); }
 
   // Station
   var sn=document.getElementById("sn-"+centre.id);
