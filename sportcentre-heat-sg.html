@@ -580,30 +580,25 @@ html,body{
   border-bottom:1px solid var(--line);
   display:flex;
   flex-direction:column;
+  align-items:center;
   gap:5px;
   background:#fff;
   transition:background 0.4s ease;
+  text-align:center;
 }
 .card-ops.ops-normal  { background:#fff; }
 .card-ops.ops-caution { background:#FFF3CC; }
 .card-ops.ops-danger  { background:#FFD0D4; }
-.ops-label{
-  font-size:9px;
-  font-weight:700;
-  letter-spacing:0.12em;
-  text-transform:uppercase;
-  color:var(--text-dimmer);
-}
 .ops-status{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:800;
-  font-size:15px;
+  font-size:26px;
   line-height:1.2;
-  color:#1A1D22;
+  color:#000;
 }
-.ops-status.ops-danger-text { color:#A30010; }
-.ops-status.ops-caution-text{ color:#7A5200; }
-.ops-status.ops-normal-text { color:#15803D; }
+.ops-status.ops-danger-text { color:#000; }
+.ops-status.ops-caution-text{ color:#000; }
+.ops-status.ops-normal-text { color:#000; }
 .ops-until{
   font-size:11px;
   font-weight:600;
@@ -913,7 +908,6 @@ function buildCards(){
           '<div class="card-status-badge" id="csb-'+c.id+'">Loading</div>'+
         '</div>'+
         '<div class="card-ops ops-normal" id="ops-'+c.id+'">'+
-          '<div class="ops-label">Sport Centre Operational Status</div>'+
           '<div class="ops-status ops-normal-text" id="ops-status-'+c.id+'">Loading…</div>'+
           '<div class="ops-until" id="ops-until-'+c.id+'" style="display:none"></div>'+
         '</div>'+
@@ -1105,7 +1099,7 @@ function renderOpsStatus(centre, lightning, wbgt){
   } else {
     opsEl.className    = "card-ops ops-normal";
     statusEl.className = "ops-status ops-normal-text";
-    statusEl.textContent = "✓ Normal Operations";
+    statusEl.textContent = "Normal Operations";
     untilEl.style.display = "none";
   }
 }
