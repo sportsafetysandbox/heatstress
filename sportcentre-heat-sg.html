@@ -574,75 +574,51 @@ html,body{
   font-size:12px;
 }
 
-/* Crowd row */
-.card-crowd{
-  display:grid;
-  grid-template-columns:1fr 1fr;
+/* Operational Status Card */
+.card-ops{
+  padding:12px 14px;
   border-bottom:1px solid var(--line);
-}
-.crowd-cell{
-  padding:8px 12px;
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:5px;
   background:#fff;
+  transition:background 0.4s ease;
 }
-.crowd-cell+.crowd-cell{ border-left:1px solid var(--line); }
-.crowd-label{
+.card-ops.ops-normal  { background:#fff; }
+.card-ops.ops-caution { background:#FFF3CC; }
+.card-ops.ops-danger  { background:#FFD0D4; }
+.ops-label{
   font-size:9px;
   font-weight:700;
-  letter-spacing:0.1em;
+  letter-spacing:0.12em;
   text-transform:uppercase;
   color:var(--text-dimmer);
 }
-.crowd-bar-wrap{
-  height:6px;
-  background:var(--line);
-  border-radius:3px;
-  overflow:hidden;
-}
-.crowd-bar-fill{
-  height:100%;
-  border-radius:3px;
-  background:var(--safe);
-  transition:width 0.6s ease, background 0.4s ease;
-}
-.crowd-bar-fill.pct-mod { background:var(--caution); }
-.crowd-bar-fill.pct-high{ background:var(--danger); }
-.crowd-pct{
+.ops-status{
   font-family:'Barlow Condensed',sans-serif;
-  font-weight:700;
-  font-size:13px;
-  color:var(--text-dim);
-  line-height:1;
+  font-weight:800;
+  font-size:15px;
+  line-height:1.2;
+  color:#1A1D22;
 }
-.crowd-pct.pct-mod { color:var(--caution-text,var(--caution)); }
-.crowd-pct.pct-high{ color:var(--danger-text,var(--danger)); }
-.crowd-status{
-  font-size:9px;
-  letter-spacing:0.04em;
-  text-transform:uppercase;
-  color:var(--text-dimmer);
+.ops-status.ops-danger-text { color:#A30010; }
+.ops-status.ops-caution-text{ color:#7A5200; }
+.ops-status.ops-normal-text { color:#15803D; }
+.ops-until{
+  font-size:11px;
+  font-weight:600;
+  color:#A30010;
+  letter-spacing:0.02em;
 }
-/* Crowd cells always white — override coloured card backgrounds */
-.st-safe .crowd-cell,
-.st-caution .crowd-cell,
-.st-danger .crowd-cell{ background:#fff; border-color:rgba(0,0,0,0.08); }
-.st-safe .card-crowd,
-.st-caution .card-crowd,
-.st-danger .card-crowd{ border-color:rgba(0,0,0,0.1); }
-.st-safe .crowd-label,
-.st-caution .crowd-label,
-.st-danger .crowd-label{ color:var(--text-dimmer); }
-.st-safe .crowd-pct,
-.st-caution .crowd-pct,
-.st-danger .crowd-pct{ color:var(--text-dim); }
-.st-safe .crowd-status,
-.st-caution .crowd-status,
-.st-danger .crowd-status{ color:var(--text-dimmer); }
-.st-safe .crowd-bar-wrap,
-.st-caution .crowd-bar-wrap,
-.st-danger .crowd-bar-wrap{ background:var(--line); }
+/* Override inside coloured cards */
+.st-safe .card-ops,
+.st-caution .card-ops,
+.st-danger .card-ops{ border-color:rgba(0,0,0,0.08); }
+.st-danger .card-ops.ops-danger { background:#FFD0D4; }
+.st-caution .card-ops.ops-caution { background:#FFF3CC; }
+.st-safe .card-ops.ops-normal,
+.st-caution .card-ops.ops-normal,
+.st-danger .card-ops.ops-normal{ background:#fff; }
 </style>
 </head>
 <body>
@@ -936,19 +912,10 @@ function buildCards(){
           '<div class="centre-name">'+c.name+'</div>'+
           '<div class="card-status-badge" id="csb-'+c.id+'">Loading</div>'+
         '</div>'+
-        '<div class="card-crowd">'+
-          '<div class="crowd-cell">'+
-            '<div class="crowd-label">🏋 Gym</div>'+
-            '<div class="crowd-bar-wrap"><div class="crowd-bar-fill" id="gbf-'+c.id+'" style="width:0%"></div></div>'+
-            '<div class="crowd-pct" id="gpct-'+c.id+'">'+(c.gymId?'—':'N/A')+'</div>'+
-            '<div class="crowd-status" id="gsts-'+c.id+'">'+(c.gymId?'Loading':'No gantry data')+'</div>'+
-          '</div>'+
-          '<div class="crowd-cell">'+
-            '<div class="crowd-label">🏊 Pool</div>'+
-            '<div class="crowd-bar-wrap"><div class="crowd-bar-fill" id="pbf-'+c.id+'" style="width:0%"></div></div>'+
-            '<div class="crowd-pct" id="ppct-'+c.id+'">'+(c.poolId?'—':'N/A')+'</div>'+
-            '<div class="crowd-status" id="psts-'+c.id+'">'+(c.poolId?'Loading':'No gantry data')+'</div>'+
-          '</div>'+
+        '<div class="card-ops ops-normal" id="ops-'+c.id+'">'+
+          '<div class="ops-label">Sport Centre Operational Status</div>'+
+          '<div class="ops-status ops-normal-text" id="ops-status-'+c.id+'">Loading…</div>'+
+          '<div class="ops-until" id="ops-until-'+c.id+'" style="display:none"></div>'+
         '</div>'+
         '<div class="card-metrics">'+
           '<div class="card-divider">'+
@@ -1074,80 +1041,73 @@ function renderCard(centre, wbgt, lightning, psiVal, history){
 }
 
 // ---------- DATA STATE ----------
-var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}}, crowd:{} };
+var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}} };
 
 // ---------- CROWD ----------
-// Fetched via the Cloudflare Worker proxy which includes the
-// cf_clearance cookie — works on all devices, no extension needed.
-var CROWD_REFRESH_MS = 15 * 60 * 1000; // refresh every 15 min
+// ---------- OPERATIONAL STATUS ----------
+// Priority: C2G lightning > C2C lightning > High WBGT > Moderate WBGT > Normal
 
-function fetchCrowd(){
-  return fetch(PROXY + "?api=crowd")
-    .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
-    .then(function(json){
-      var inner = (json&&json.result&&json.result.data&&json.result.data.json)||{};
-      if(!inner.gymFacilities) throw new Error("No facility data");
-      var lookup = {};
-      (inner.gymFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
-      (inner.swimFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
-      dataState.crowd = lookup;
-      dataState.crowdUpdatedAt = new Date().toISOString();
-      updateCrowdCards();
-    }).catch(function(e){ console.warn("Crowd fetch failed:", e.message); });
-}
-
-// Also listen for data from the browser extension if installed
-// (extension provides faster updates during desktop use)
-window.addEventListener('heatsg:crowd', function(e){
-  var json = e.detail;
-  if(!json || json.error) return;
-  var lookup = {};
-  (json.gymFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
-  (json.swimFacilities||[]).forEach(function(f){ lookup[f.id]=f; });
-  dataState.crowd = lookup;
-  dataState.crowdUpdatedAt = json.updatedAt||null;
-  updateCrowdCards();
-});
-
-function crowdClass(pct){
-  return pct >= 75 ? "pct-high" : pct >= 50 ? "pct-mod" : "";
-}
-
-function renderCrowdCell(centreId, prefix, facilityId){
-  var pctEl  = document.getElementById(prefix+"pct-"+centreId);
-  var stsEl  = document.getElementById(prefix+"sts-"+centreId);
-  var barEl  = document.getElementById(prefix+"bf-"+centreId);
-  if(!pctEl||!stsEl||!barEl) return;
-  if(!facilityId){
-    pctEl.textContent="N/A"; stsEl.textContent="No gantry data";
-    barEl.style.width="0%"; barEl.className="crowd-bar-fill";
-    return;
-  }
-  var f = dataState.crowd[facilityId];
-  if(!f){
-    pctEl.textContent="—"; stsEl.textContent="No data";
-    barEl.style.width="0%"; return;
-  }
-  if(f.isClosed){
-    pctEl.textContent="Closed"; pctEl.className="crowd-pct";
-    stsEl.textContent="Facility closed";
-    barEl.style.width="0%"; barEl.className="crowd-bar-fill"; return;
-  }
-  var pct = f.capacityPercentage||0;
-  var cls = crowdClass(pct);
-  pctEl.textContent = pct+"%";
-  pctEl.className = "crowd-pct"+(cls?" "+cls:"");
-  stsEl.textContent = pct>=75?"Busy":pct>=50?"Moderate":"Quiet";
-  barEl.style.width = pct+"%";
-  barEl.className = "crowd-bar-fill"+(cls?" "+cls:"");
-}
-
-function updateCrowdCards(){
-  var allCentres=Object.values(ZONES).reduce(function(a,b){return a.concat(b);});
-  allCentres.forEach(function(c){
-    renderCrowdCell(c.id, "g", c.gymId);
-    renderCrowdCell(c.id, "p", c.poolId);
+function latestC2GTime(strikes, lat, lon){
+  // Returns the most recent C2G strike time within radius, or null
+  var cutoff = new Date(Date.now() - 30*60*1000);
+  var recent = strikes.filter(function(s){
+    return s.type==="G" && s.time && s.time>=cutoff && haversine(lat,lon,s.lat,s.lon)<=LIGHTNING_RADIUS_KM;
   });
+  if(!recent.length) return null;
+  return recent.reduce(function(a,b){ return a.time>b.time?a:b; }).time;
+}
+
+function formatTime(date){
+  return date.toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Singapore"});
+}
+
+function renderOpsStatus(centre, lightning, wbgt){
+  var opsEl    = document.getElementById("ops-"+centre.id);
+  var statusEl = document.getElementById("ops-status-"+centre.id);
+  var untilEl  = document.getElementById("ops-until-"+centre.id);
+  if(!opsEl||!statusEl||!untilEl) return;
+
+  var hasC2G = lightning.g.length > 0;
+  var hasC2C = lightning.c.length > 0;
+  var wLevel = classifyWBGT(wbgt.value, wbgt.flag);
+
+  if(hasC2G){
+    // Find most recent C2G strike time and add 30 min
+    var lastC2G = latestC2GTime(dataState.strikes, centre.lat, centre.lon);
+    var allClearTime = lastC2G ? new Date(lastC2G.getTime() + 30*60*1000) : null;
+    opsEl.className    = "card-ops ops-danger";
+    statusEl.className = "ops-status ops-danger-text";
+    statusEl.textContent = "⚡ All Outdoor Activities Ceased — Lightning Risk Alert";
+    untilEl.style.display = "block";
+    untilEl.textContent = allClearTime
+      ? "Resume outdoor activities after " + formatTime(allClearTime) + " SGT (if no further C2G)"
+      : "Resume after 30 min of no further C2G strikes within 8 km";
+
+  } else if(hasC2C){
+    opsEl.className    = "card-ops ops-caution";
+    statusEl.className = "ops-status ops-caution-text";
+    statusEl.textContent = "☁ Lightning Standby — Cloud-to-Cloud Activity within 8 km";
+    untilEl.style.display = "block";
+    untilEl.textContent = "Monitor closely — C2C may precede cloud-to-ground strikes";
+
+  } else if(wLevel==="danger"){
+    opsEl.className    = "card-ops ops-danger";
+    statusEl.className = "ops-status ops-danger-text";
+    statusEl.textContent = "🌡 High Heat Stress Risk — Minimise Outdoor Activities";
+    untilEl.style.display = "none";
+
+  } else if(wLevel==="caution"){
+    opsEl.className    = "card-ops ops-caution";
+    statusEl.className = "ops-status ops-caution-text";
+    statusEl.textContent = "🌡 Moderate Heat Stress Risk — Reduce Activity Intensity";
+    untilEl.style.display = "none";
+
+  } else {
+    opsEl.className    = "card-ops ops-normal";
+    statusEl.className = "ops-status ops-normal-text";
+    statusEl.textContent = "✓ Normal Operations";
+    untilEl.style.display = "none";
+  }
 }
 
 
@@ -1161,6 +1121,7 @@ function updateAllCards(){
     var psiVal=nearestPSI(dataState.psiParsed,c.lat,c.lon);
     var hist=wRes?(dataState.wbgtHistory[wRes.station.id]||[]):[];
     renderCard(c, wbgtResult, lNearby, psiVal, hist);
+    renderOpsStatus(c, lNearby, wbgtResult);
   });
 }
 
@@ -1221,10 +1182,8 @@ function refreshLightning(){
 
 buildCards();
 refresh();
-fetchCrowd();
 setInterval(refresh, REFRESH_MS);
 setInterval(refreshLightning, LIGHTNING_REFRESH_MS);
-setInterval(fetchCrowd, CROWD_REFRESH_MS);
 
 // Mobile tap + desktop click support for info icon tooltips.
 // Tooltip uses position:fixed to escape card overflow:hidden clipping.
