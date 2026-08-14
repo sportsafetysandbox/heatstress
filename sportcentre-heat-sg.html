@@ -167,11 +167,19 @@ html,body{
   border:1px solid var(--line);
   border-radius:8px;
   overflow:hidden;
-  padding:4px;
 }
-.map-svg{ width:100%; display:block; }
-.map-pin{ cursor:pointer; }
-.map-pin circle.outer{ transition:fill 0.4s ease; }
+.map-tooltip{
+  background:#1A2233;
+  color:#F2F3F4;
+  border:none;
+  border-radius:4px;
+  font-family:'Inter',sans-serif;
+  font-size:11px;
+  font-weight:600;
+  padding:3px 8px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+.map-tooltip::before{ border-top-color:#1A2233; }
 
 /* ---- DASHBOARD BODY ---- */
 .body{
@@ -672,184 +680,117 @@ html,body{
 <div class="body">
 
   <!-- ===== SINGAPORE MAP ===== -->
-  <div class="map-section">
-    <svg class="map-svg" viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg">
-      <!-- Water / background -->
-      <rect x="0" y="0" width="680" height="260" fill="#E8EEF4"/>
-      <!-- Singapore main island — real Natural Earth 10m coastline, 40 points, Mercator projected -->
-      <polygon
-        points="476.2,76.2 505.5,80.1 521.8,83.7 526.4,87.9 512.8,101.1 492.8,115.2 468.7,126.4 442.2,131.0 413.2,132.9 390.2,138.0 349.1,154.5 342.3,158.2 338.9,160.5 332.8,162.1 317.7,163.4 288.9,163.1 274.8,161.0 268.7,156.8 258.7,147.4 234.3,140.9 204.9,136.9 179.7,135.3 128.6,136.1 107.8,133.1 99.3,123.6 104.4,112.7 139.5,83.7 144.6,70.6 150.4,63.3 163.6,55.5 179.2,49.9 190.5,48.8 216.2,50.8 242.6,48.8 275.4,39.7 292.9,36.7 324.2,37.8 354.3,43.5 442.9,69.4 476.2,76.2"
-        fill="#D6E4D0" stroke="#A8C4A0" stroke-width="1" stroke-linejoin="round"
-      />
-
-      <!-- Zone labels -->
-      <text x="285" y="57" font-family="Arial,sans-serif" font-size="8" fill="#6B8F6B" letter-spacing="0.1em" text-anchor="middle" opacity="0.7">NORTH</text>
-      <text x="400" y="78" font-family="Arial,sans-serif" font-size="8" fill="#6B8F6B" letter-spacing="0.1em" text-anchor="middle" opacity="0.7">NORTHEAST</text>
-      <text x="195" y="128" font-family="Arial,sans-serif" font-size="8" fill="#6B8F6B" letter-spacing="0.1em" text-anchor="middle" opacity="0.7">WEST</text>
-      <text x="310" y="148" font-family="Arial,sans-serif" font-size="8" fill="#6B8F6B" letter-spacing="0.1em" text-anchor="middle" opacity="0.7">CENTRAL</text>
-      <text x="440" y="140" font-family="Arial,sans-serif" font-size="8" fill="#6B8F6B" letter-spacing="0.1em" text-anchor="middle" opacity="0.7">EAST</text>
-
-      <!--
-        PROJECTION: lon→x = (lon-103.59)/0.51*600+40  lat→y = (1.47-lat)/0.32*220+22
-        Centres and their map coords:
-        Yishun        1.4121,103.8313 → 281,70
-        Bukit Canberra1.4489,103.8239 → 272,55
-        Woodlands     1.4341,103.7798 → 237,61
-        Yio Chu Kang  1.3822,103.8459 → 295,81
-        Bishan        1.3555,103.8510 → 299,90
-        Hougang       1.3706,103.8885 → 338,85
-        Sengkang      1.3968,103.8869 → 337,75
-        Serangoon     1.3571,103.8747 → 325,89
-        Punggol       1.4085,103.9067 → 358,71
-        Bukit Gombak  1.3597,103.7522 → 199,88
-        Choa Chu Kang 1.3910,103.7483 → 196,77
-        Jurong East   1.3470,103.7291 → 178,92
-        Jurong West   1.3378,103.6942 → 137,95
-        Delta         1.2892,103.8200 → 259,117
-        Queenstown    1.2969,103.8029 → 244,114
-        Clementi      1.3111,103.7650 → 208,109
-        Jalan Besar   1.3105,103.8595 → 322,109
-        Toa Payoh     1.3377,103.8449 → 303,102
-        Heartbeat Bedok 1.3269,103.9322→ 385,106
-        Kallang       1.3054,103.8796 → 334,112
-        Pasir Ris     1.3740,103.9515 → 406,83
-        Tampines      1.3537,103.9408 → 394,89
-      -->
-
-      <!-- PIN MACRO: outer circle (status colour) + white ring + white dot + label -->
-      <!-- Default colour #CAD73E (safe/normal) — JS will update to live status colour -->
-
-      <!-- NORTH -->
-      <g class="map-pin" id="mpin-bukitcanberra" onclick="document.getElementById('card-bukitcanberra').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="315" cy="37" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="315" cy="37" r="2.5" fill="white"/>
-        <text x="315" y="27" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="middle" font-weight="700">Bukit Canberra</text>
-      </g>
-      <g class="map-pin" id="mpin-woodlands" onclick="document.getElementById('card-woodlands').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="263" cy="47" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="263" cy="47" r="2.5" fill="white"/>
-        <text x="248" y="58" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Woodlands</text>
-      </g>
-      <g class="map-pin" id="mpin-yishun" onclick="document.getElementById('card-yishun').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="324" cy="62" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="324" cy="62" r="2.5" fill="white"/>
-        <text x="335" y="58" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="start" font-weight="700">Yishun</text>
-      </g>
-      <g class="map-pin" id="mpin-yiochukang" onclick="document.getElementById('card-yiochukang').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="341" cy="82" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="341" cy="82" r="2.5" fill="white"/>
-        <text x="356" y="86" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="start" font-weight="700">Yio Chu Kang</text>
-      </g>
-
-      <!-- NORTHEAST -->
-      <g class="map-pin" id="mpin-punggol" onclick="document.getElementById('card-punggol').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="413" cy="64" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="413" cy="64" r="2.5" fill="white"/>
-        <text x="413" y="54" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="middle" font-weight="700">Punggol</text>
-      </g>
-      <g class="map-pin" id="mpin-sengkang" onclick="document.getElementById('card-sengkang').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="389" cy="72" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="389" cy="72" r="2.5" fill="white"/>
-        <text x="374" y="68" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Sengkang</text>
-      </g>
-      <g class="map-pin" id="mpin-hougang" onclick="document.getElementById('card-hougang').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="391" cy="90" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="391" cy="90" r="2.5" fill="white"/>
-        <text x="406" y="94" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="start" font-weight="700">Hougang</text>
-      </g>
-      <g class="map-pin" id="mpin-serangoon" onclick="document.getElementById('card-serangoon').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="375" cy="100" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="375" cy="100" r="2.5" fill="white"/>
-        <text x="360" y="110" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Serangoon</text>
-      </g>
-      <g class="map-pin" id="mpin-bishan" onclick="document.getElementById('card-bishan').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="347" cy="101" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="347" cy="101" r="2.5" fill="white"/>
-        <text x="332" y="111" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Bishan</text>
-      </g>
-
-      <!-- WEST -->
-      <g class="map-pin" id="mpin-cck" onclick="document.getElementById('card-cck').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="226" cy="76" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="226" cy="76" r="2.5" fill="white"/>
-        <text x="211" y="68" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Choa Chu Kang</text>
-      </g>
-      <g class="map-pin" id="mpin-bukitgombak" onclick="document.getElementById('card-bukitgombak').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="231" cy="98" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="231" cy="98" r="2.5" fill="white"/>
-        <text x="216" y="108" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Bukit Gombak</text>
-      </g>
-      <g class="map-pin" id="mpin-jurongeast" onclick="document.getElementById('card-jurongeast').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="204" cy="107" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="204" cy="107" r="2.5" fill="white"/>
-        <text x="189" y="117" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Jurong East</text>
-      </g>
-      <g class="map-pin" id="mpin-jurongwest" onclick="document.getElementById('card-jurongwest').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="163" cy="113" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="163" cy="113" r="2.5" fill="white"/>
-        <text x="148" y="123" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Jurong West</text>
-      </g>
-
-      <!-- CENTRAL -->
-      <g class="map-pin" id="mpin-clementi" onclick="document.getElementById('card-clementi').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="246" cy="131" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="246" cy="131" r="2.5" fill="white"/>
-        <text x="231" y="141" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Clementi</text>
-      </g>
-      <g class="map-pin" id="mpin-queenstown" onclick="document.getElementById('card-queenstown').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="290" cy="141" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="290" cy="141" r="2.5" fill="white"/>
-        <text x="275" y="151" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Queenstown</text>
-      </g>
-      <g class="map-pin" id="mpin-delta" onclick="document.getElementById('card-delta').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="311" cy="146" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="311" cy="146" r="2.5" fill="white"/>
-        <text x="296" y="156" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Delta</text>
-      </g>
-      <g class="map-pin" id="mpin-toapayoh" onclick="document.getElementById('card-toapayoh').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="340" cy="113" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="340" cy="113" r="2.5" fill="white"/>
-        <text x="325" y="123" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Toa Payoh</text>
-      </g>
-      <g class="map-pin" id="mpin-jalanbesar" onclick="document.getElementById('card-jalanbesar').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="357" cy="132" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="357" cy="132" r="2.5" fill="white"/>
-        <text x="372" y="128" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="start" font-weight="700">Jalan Besar</text>
-      </g>
-
-      <!-- EAST -->
-      <g class="map-pin" id="mpin-kallang" onclick="document.getElementById('card-kallang').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="381" cy="135" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="381" cy="135" r="2.5" fill="white"/>
-        <text x="366" y="145" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Kallang</text>
-      </g>
-      <g class="map-pin" id="mpin-bedok" onclick="document.getElementById('card-bedok').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="443" cy="120" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="443" cy="120" r="2.5" fill="white"/>
-        <text x="458" y="116" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="start" font-weight="700">Heartbeat @ Bedok</text>
-      </g>
-      <g class="map-pin" id="mpin-tampines" onclick="document.getElementById('card-tampines').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="453" cy="102" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="453" cy="102" r="2.5" fill="white"/>
-        <text x="438" y="112" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="end" font-weight="700">Tampines</text>
-      </g>
-      <g class="map-pin" id="mpin-pasirris" onclick="document.getElementById('card-pasirris').scrollIntoView({behavior:'smooth',block:'center'})">
-        <circle class="outer" cx="465" cy="88" r="7" fill="#CAD73E" stroke="white" stroke-width="1.5"/>
-        <circle cx="465" cy="88" r="2.5" fill="white"/>
-        <text x="480" y="84" font-family="Arial,sans-serif" font-size="7.5" fill="#1A2233" text-anchor="start" font-weight="700">Pasir Ris</text>
-      </g>
-
-      <!-- LEGEND -->
-      <rect x="480" y="162" width="186" height="68" rx="5" fill="white" stroke="#C9CDD2" stroke-width="0.5" opacity="0.95"/>
-      <text x="494" y="177" font-family="Arial,sans-serif" font-size="8" fill="#7A8090" font-weight="700" letter-spacing="0.08em">STATUS</text>
-      <circle cx="495" cy="190" r="5" fill="#CAD73E" stroke="white" stroke-width="1.5"/><circle cx="495" cy="190" r="1.8" fill="white"/>
-      <text x="506" y="194" font-family="Arial,sans-serif" font-size="8" fill="#1A2233">Normal / Low heat</text>
-      <circle cx="495" cy="205" r="5" fill="#FFC432" stroke="white" stroke-width="1.5"/><circle cx="495" cy="205" r="1.8" fill="white"/>
-      <text x="506" y="209" font-family="Arial,sans-serif" font-size="8" fill="#1A2233">Moderate / C2C lightning</text>
-      <circle cx="495" cy="220" r="5" fill="#F50016" stroke="white" stroke-width="1.5"/><circle cx="495" cy="220" r="1.8" fill="white"/>
-      <text x="506" y="224" font-family="Arial,sans-serif" font-size="8" fill="#1A2233">High / C2G lightning alert</text>
-    </svg>
+  <!-- ===== LEAFLET MAP ===== -->
+  <div class="map-section" style="padding:0;">
+    <div id="sg-map" style="height:320px; width:100%; border-radius:8px;"></div>
   </div>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  (function(){
+    var map = L.map('sg-map', {
+      center: [1.352, 103.82],
+      zoom: 11,
+      zoomControl: true,
+      scrollWheelZoom: false,
+      attributionControl: true
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 18
+    }).addTo(map);
+
+    // Status colours matching the card palette
+    var STATUS_COLOURS = {
+      safe:    '#CAD73E',
+      caution: '#FFC432',
+      danger:  '#F50016',
+      loading: '#C9CDD2'
+    };
+
+    // Custom circle marker icon
+    function makeIcon(colour) {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">'
+        + '<circle cx="11" cy="11" r="9" fill="' + colour + '" stroke="white" stroke-width="2.5"/>'
+        + '<circle cx="11" cy="11" r="3.5" fill="white"/>'
+        + '</svg>';
+      return L.divIcon({
+        html: svg,
+        className: '',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+        popupAnchor: [0, -14]
+      });
+    }
+
+    // All 22 sport centres
+    var CENTRES = [
+      {id:'yishun',        name:'Yishun',               lat:1.4121111, lon:103.8313335},
+      {id:'bukitcanberra', name:'Bukit Canberra',        lat:1.4488728, lon:103.8239457},
+      {id:'woodlands',     name:'Woodlands',             lat:1.434104,  lon:103.779798},
+      {id:'yiochukang',    name:'Yio Chu Kang',          lat:1.3822319, lon:103.845925},
+      {id:'bishan',        name:'Bishan',                lat:1.3555048, lon:103.8509503},
+      {id:'hougang',       name:'Hougang',               lat:1.3706138, lon:103.8885266},
+      {id:'sengkang',      name:'Sengkang',              lat:1.3967848, lon:103.886901},
+      {id:'serangoon',     name:'Serangoon',             lat:1.3570514, lon:103.8746748},
+      {id:'punggol',       name:'Punggol',               lat:1.4084829, lon:103.9067354},
+      {id:'bukitgombak',   name:'Bukit Gombak',          lat:1.359667,  lon:103.752228},
+      {id:'cck',           name:'Choa Chu Kang',         lat:1.3910172, lon:103.7482599},
+      {id:'jurongeast',    name:'Jurong East',           lat:1.346998,  lon:103.729109},
+      {id:'jurongwest',    name:'Jurong West',           lat:1.3378059, lon:103.6941925},
+      {id:'delta',         name:'Delta',                 lat:1.2891624, lon:103.8200350},
+      {id:'queenstown',    name:'Queenstown',            lat:1.2969489, lon:103.8028823},
+      {id:'clementi',      name:'Clementi',              lat:1.3110740, lon:103.765017},
+      {id:'jalanbesar',    name:'Jalan Besar',           lat:1.3104768, lon:103.8595381},
+      {id:'toapayoh',      name:'Toa Payoh',             lat:1.3376708, lon:103.8448689},
+      {id:'bedok',         name:'Heartbeat @ Bedok',     lat:1.3269164, lon:103.9321636},
+      {id:'kallang',       name:'Kallang',               lat:1.3054235, lon:103.8795557},
+      {id:'pasirris',      name:'Pasir Ris',             lat:1.3740237, lon:103.9514946},
+      {id:'tampines',      name:'Tampines',              lat:1.3536977, lon:103.9407675},
+    ];
+
+    // Create markers and store references
+    var markers = {};
+    CENTRES.forEach(function(c) {
+      var marker = L.marker([c.lat, c.lon], {
+        icon: makeIcon(STATUS_COLOURS.loading)
+      }).addTo(map);
+
+      marker.bindTooltip(c.name, {
+        permanent: false,
+        direction: 'top',
+        className: 'map-tooltip'
+      });
+
+      marker.on('click', function() {
+        var card = document.getElementById('card-' + c.id);
+        if (card) card.scrollIntoView({behavior:'smooth', block:'center'});
+      });
+
+      markers[c.id] = marker;
+    });
+
+    // Update pin colours based on card status
+    window.updateMapPins = function() {
+      CENTRES.forEach(function(c) {
+        var card = document.getElementById('card-' + c.id);
+        if (!card || !markers[c.id]) return;
+        var cls = card.className;
+        var colour = cls.indexOf('st-danger')  > -1 ? STATUS_COLOURS.danger  :
+                     cls.indexOf('st-caution') > -1 ? STATUS_COLOURS.caution :
+                     cls.indexOf('st-safe')    > -1 ? STATUS_COLOURS.safe    :
+                                                       STATUS_COLOURS.loading;
+        markers[c.id].setIcon(makeIcon(colour));
+      });
+    };
+
+    // Expose map for external resize if needed
+    window._sgMap = map;
+  })();
+  </script>
+
 
   <div class="zone">
     <div class="zone-header">
@@ -1239,31 +1180,6 @@ var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{region
 
 // ---------- CROWD ----------
 // ---------- MAP PIN COLOURS ----------
-// Colour constants matching the card palette
-var PIN_SAFE    = "#CAD73E";
-var PIN_CAUTION = "#FFC432";
-var PIN_DANGER  = "#F50016";
-var PIN_LOADING = "#C9CDD2";
-
-function updateMapPins(){
-  var allCentres = Object.values(ZONES).reduce(function(a,b){return a.concat(b);});
-  allCentres.forEach(function(c){
-    var pin = document.getElementById("mpin-"+c.id);
-    if(!pin) return;
-    var outer = pin.querySelector("circle.outer");
-    if(!outer) return;
-
-    // Read the card's current status class to determine colour
-    var card = document.getElementById("card-"+c.id);
-    if(!card){ outer.setAttribute("fill", PIN_LOADING); return; }
-
-    var cls = card.className;
-    if(cls.indexOf("st-danger")>-1)  outer.setAttribute("fill", PIN_DANGER);
-    else if(cls.indexOf("st-caution")>-1) outer.setAttribute("fill", PIN_CAUTION);
-    else if(cls.indexOf("st-safe")>-1)    outer.setAttribute("fill", PIN_SAFE);
-    else outer.setAttribute("fill", PIN_LOADING);
-  });
-}
 
 
 // Priority: C2G lightning > C2C lightning > High WBGT > Moderate WBGT > Normal
