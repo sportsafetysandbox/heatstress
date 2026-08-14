@@ -182,20 +182,7 @@ html,body{
   white-space:nowrap !important;
 }
 .map-label::before{ border-top-color:#1A2233 !important; }
-/* Popup card container */
-.centre-card-popup .leaflet-popup-content-wrapper{
-  padding:0 !important;
-  border-radius:6px !important;
-  overflow:hidden !important;
-  box-shadow:0 4px 20px rgba(0,0,0,0.25) !important;
-}
-.centre-card-popup .leaflet-popup-content{
-  margin:0 !important;
-  width:300px !important;
-}
-.centre-card-popup .leaflet-popup-tip{
-  background:#F2F3F4;
-}
+/* Popup card container — now handled by modal overlay */
 
 /* ---- DASHBOARD BODY ---- */
 .body{
@@ -783,26 +770,21 @@ html,body{
         className: 'map-label'
       }).openTooltip();
 
-      // Click — open popup containing the card HTML
+      // Click — open modal overlay with the card content
       marker.on('click', function() {
         var card = document.getElementById('card-' + c.id);
         if (!card) return;
 
-        // Clone the card and strip animated classes that need live data
+        // Clone the card into the modal
+        var modal = document.getElementById('map-modal');
+        var modalBody = document.getElementById('map-modal-body');
         var clone = card.cloneNode(true);
-        clone.style.cssText = 'width:300px; box-shadow:none; border-radius:0; margin:0; border:none;';
-        // Remove any IDs so they don't conflict
+        clone.style.cssText = 'width:100%; box-shadow:none; border-radius:0; margin:0; border:none;';
         clone.querySelectorAll('[id]').forEach(function(el){ el.removeAttribute('id'); });
-
-        var popup = L.popup({
-          maxWidth: 320,
-          minWidth: 300,
-          className: 'centre-card-popup',
-          offset: [0, -12]
-        })
-        .setLatLng([c.lat, c.lon])
-        .setContent(clone)
-        .openOn(map);
+        modalBody.innerHTML = '';
+        modalBody.appendChild(clone);
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
       });
 
       markers[c.id] = marker;
@@ -1452,6 +1434,59 @@ document.addEventListener("mouseover", function(e){
     Download folder → Chrome → Load unpacked
   </div>
 </div>
+
+<!-- ===== MAP CARD MODAL ===== -->
+<div id="map-modal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:rgba(0,0,0,0.55);
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+" onclick="if(event.target===this){closeMapModal();}">
+  <div style="
+    background:var(--bg-card);
+    border-radius:8px;
+    overflow:hidden;
+    width:100%;
+    max-width:360px;
+    max-height:90vh;
+    overflow-y:auto;
+    position:relative;
+    box-shadow:0 8px 40px rgba(0,0,0,0.4);
+  ">
+    <button onclick="closeMapModal()" style="
+      position:absolute;
+      top:8px; right:10px;
+      background:rgba(0,0,0,0.25);
+      border:none;
+      color:#fff;
+      font-size:18px;
+      font-weight:700;
+      width:28px; height:28px;
+      border-radius:50%;
+      cursor:pointer;
+      line-height:1;
+      z-index:2;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    ">×</button>
+    <div id="map-modal-body"></div>
+  </div>
+</div>
+
+<script>
+function closeMapModal(){
+  document.getElementById('map-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') closeMapModal();
+});
+</script>
 
 </body>
 </html>
