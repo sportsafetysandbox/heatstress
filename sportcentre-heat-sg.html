@@ -248,403 +248,113 @@ html,body{
 
 /* ---- CENTRE CARD ---- */
 .centre-card{
-  background:var(--bg-card);
-  border:1px solid var(--line);
-  border-top:3px solid var(--text-dimmer);
-  border-radius:6px;
+  border-radius:16px;
   overflow:hidden;
-  transition:border-top-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease, color 0.4s ease;
+  background:var(--bg-card);
+  border:2px solid var(--line);
+  transition:background 0.4s ease,border-color 0.4s ease,box-shadow 0.4s ease;
 }
-
-/* Full card background = palette colour — text needs dark overrides for legibility */
-.centre-card.st-safe{
-  background:#CAD73E;
-  border-top-color:#8B9600;
-  border-color:#8B9600;
-}
-.centre-card.st-caution{
-  background:#FFC432;
-  border-top-color:#B88000;
-  border-color:#B88000;
-}
-.centre-card.st-danger{
-  background:#F50016;
-  border-top-color:#A30010;
-  border-color:#A30010;
+.centre-card.st-safe    { background:#7ED857; border-color:#5AAA28; }
+.centre-card.st-caution { background:#FFD740; border-color:#C89000; }
+.centre-card.st-danger  {
+  background:#E84455;
+  border-color:#B82030;
   animation:danger-pulse 2.5s ease-in-out infinite;
 }
+.centre-card.st-loading { opacity:0.45; }
 @keyframes danger-pulse{
-  0%,100%{ box-shadow:0 0 0 0 rgba(245,0,22,0); }
-  50%{ box-shadow:0 0 0 6px rgba(245,0,22,0.25); }
+  0%,100%{ box-shadow:0 0 0 0 rgba(232,68,85,0); }
+  50%{ box-shadow:0 0 0 6px rgba(232,68,85,0.25); }
 }
-@media(prefers-reduced-motion:reduce){
-  .centre-card.st-danger{ animation:none; }
-}
-.centre-card.st-loading{ opacity:0.45; }
+@media(prefers-reduced-motion:reduce){ .centre-card.st-danger{ animation:none; } }
 
-/* Text: pure black for all readings inside coloured cards */
-.st-safe .centre-name,
-.st-caution .centre-name,
-.st-danger .centre-name{ color:#000; }
-
-.st-safe .card-status-badge,
-.st-caution .card-status-badge,
-.st-danger .card-status-badge{
-  background:rgba(255,255,255,0.3);
-  color:#000;
-  border-color:rgba(255,255,255,0.5);
-}
-
-.st-safe .metric-label,
-.st-caution .metric-label,
-.st-danger .metric-label{ color:rgba(0,0,0,0.6); }
-
-.st-safe .metric-value,
-.st-caution .metric-value,
-.st-danger .metric-value{ color:#000; }
-
-.st-safe .metric-badge,
-.st-caution .metric-badge,
-.st-danger .metric-badge{ color:#000; }
-
-/* Internal dividers: white */
-.st-safe .card-divider,
-.st-caution .card-divider,
-.st-danger .card-divider{
-  background:rgba(255,255,255,0.2);
-  border-color:rgba(255,255,255,0.6);
-}
-
-.st-safe .card-divider-label,
-.st-caution .card-divider-label,
-.st-danger .card-divider-label{ color:rgba(0,0,0,0.65); }
-
-.st-safe .metric,
-.st-caution .metric,
-.st-danger .metric{ border-color:rgba(255,255,255,0.6); }
-
-.st-safe .card-timeline,
-.st-caution .card-timeline,
-.st-danger .card-timeline{ border-color:rgba(255,255,255,0.6); }
-
-.st-safe .card-foot,
-.st-caution .card-foot,
-.st-danger .card-foot{ border-color:rgba(255,255,255,0.6); }
-
-.st-safe .card-foot-label,
-.st-caution .card-foot-label,
-.st-danger .card-foot-label{ color:rgba(0,0,0,0.55); }
-
-.st-safe .card-foot-station,
-.st-caution .card-foot-station,
-.st-danger .card-foot-station{ color:#000; }
-
-.st-safe .card-head,
-.st-caution .card-head,
-.st-danger .card-head{ border-color:rgba(255,255,255,0.6); }
-
-/* Keep timeline bar colours vivid and readable on coloured card backgrounds */
-.st-safe .tl-bar    { background:rgba(0,0,0,0.2); opacity:1; }
-.st-caution .tl-bar { background:rgba(0,0,0,0.2); opacity:1; }
-.st-danger .tl-bar  { background:rgba(255,255,255,0.3); opacity:1; }
-
-.st-safe .tl-bar.tl-now    { background:rgba(0,0,0,0.55); }
-.st-caution .tl-bar.tl-now { background:rgba(0,0,0,0.55); }
-.st-danger .tl-bar.tl-now  { background:rgba(255,255,255,0.85); }
-
-/* Colour-coded bars outside coloured cards already handled by tl-safe/caution/danger classes */
-/* Override: when a bar is inside a coloured card, use its own level colour against the card bg */
-.st-safe .tl-bar.tl-safe       { background:rgba(0,0,0,0.5); }
-.st-safe .tl-bar.tl-caution    { background:#FFC432; opacity:0.7; }
-.st-safe .tl-bar.tl-danger     { background:#F50016; opacity:0.7; }
-.st-safe .tl-bar.tl-now.tl-safe    { background:rgba(0,0,0,0.7); opacity:1; }
-.st-safe .tl-bar.tl-now.tl-caution { background:#B88000; opacity:1; }
-.st-safe .tl-bar.tl-now.tl-danger  { background:#A30010; opacity:1; }
-
-.st-caution .tl-bar.tl-safe    { background:#636A00; opacity:0.6; }
-.st-caution .tl-bar.tl-caution { background:rgba(0,0,0,0.45); }
-.st-caution .tl-bar.tl-danger  { background:#F50016; opacity:0.8; }
-.st-caution .tl-bar.tl-now.tl-safe    { background:#636A00; opacity:1; }
-.st-caution .tl-bar.tl-now.tl-caution { background:rgba(0,0,0,0.65); opacity:1; }
-.st-caution .tl-bar.tl-now.tl-danger  { background:#A30010; opacity:1; }
-
-.st-danger .tl-bar.tl-safe     { background:#CAD73E; opacity:0.7; }
-.st-danger .tl-bar.tl-caution  { background:#FFC432; opacity:0.7; }
-.st-danger .tl-bar.tl-danger   { background:rgba(255,255,255,0.35); }
-.st-danger .tl-bar.tl-now.tl-safe    { background:#CAD73E; opacity:1; }
-.st-danger .tl-bar.tl-now.tl-caution { background:#FFC432; opacity:1; }
-.st-danger .tl-bar.tl-now.tl-danger  { background:rgba(255,255,255,0.9); opacity:1; }
-
-/* Card header */
+/* Card header band */
 .card-head{
-  padding:11px 14px 9px;
-  border-bottom:1px solid var(--line);
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:8px;
+  padding:10px 16px;
+  text-align:center;
+  background:rgba(0,0,0,0.22);
 }
 .centre-name{
   font-family:'Barlow Condensed',sans-serif;
-  font-weight:700;
-  font-size:17px;
+  font-weight:800;
+  font-size:18px;
   letter-spacing:0.02em;
-  color:var(--white);
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.25);
   line-height:1.2;
 }
-.card-status-badge{
-  flex-shrink:0;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:0.08em;
-  text-transform:uppercase;
-  padding:3px 8px;
-  border-radius:3px;
-  background:var(--bg-card-alt);
-  color:var(--text-dim);
-  border:1px solid var(--line);
-  transition:background 0.4s, color 0.4s, border-color 0.4s;
-  white-space:nowrap;
-}
-.st-safe .card-status-badge{ background:var(--safe-dim); color:var(--safe-text); border-color:var(--safe); }
-.st-caution .card-status-badge{ background:var(--caution-dim); color:var(--caution-text); border-color:var(--caution); }
-.st-danger .card-status-badge{ background:var(--danger-dim); color:var(--danger-text); border-color:var(--danger); }
+.st-loading .card-head{ background:rgba(0,0,0,0.08); }
+.st-loading .centre-name{ color:var(--text-dim); text-shadow:none; }
 
-/* Metrics row */
+/* Ops banner */
+.card-ops{
+  background:rgba(255,255,255,0.92);
+  padding:9px 14px;
+  text-align:center;
+  min-height:56px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+.ops-main{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:800;
+  font-size:16px;
+  color:#1A1D22;
+  line-height:1.2;
+}
+.ops-sub{
+  font-size:12px;
+  font-weight:500;
+  color:#4A5060;
+  margin-top:3px;
+  line-height:1.3;
+}
+
+/* Metrics grid */
 .card-metrics{
   display:grid;
   grid-template-columns:1fr 1fr;
-  border-bottom:1px solid var(--line);
+  gap:1px;
+  background:rgba(0,0,0,0.12);
+  border-top:1px solid rgba(0,0,0,0.12);
 }
-.metric{
-  padding:10px 12px;
+.metric-cell{
+  background:rgba(255,255,255,0.18);
+  padding:10px 10px 12px;
   text-align:center;
-  position:relative;
-}
-.metric+.metric{ border-left:1px solid var(--line); }
-/* Border separating the C2G/C2C lightning row from the WBGT/PSI row below.
-   Grid order: 1=divider, 2=C2G, 3=C2C, 4=WBGT, 5=PSI */
-.card-metrics > .metric:nth-child(4){
-  border-top:1px solid var(--line);
-}
-.card-metrics > .metric:nth-child(5){
-  border-top:1px solid var(--line);
-  border-left:1px solid var(--line);
-}
-.card-divider{
-  grid-column:1 / -1;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:0 12px;
-  border-bottom:1px solid var(--line);
-  background:var(--bg-card-alt);
-  height:28px;
-}
-.card-divider-label{
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:0.12em;
-  text-transform:uppercase;
-  color:var(--text-dimmer);
-  white-space:nowrap;
-}
-.info-icon{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:15px;
-  height:15px;
-  border-radius:50%;
-  border:1px solid var(--text-dimmer);
-  font-size:9px;
-  font-weight:700;
-  color:var(--text-dimmer);
-  cursor:pointer;
-  position:relative;
-  flex-shrink:0;
-  font-style:normal;
-  line-height:1;
-  user-select:none;
-  -webkit-user-select:none;
-}
-.info-icon .tooltip{
-  display:none;
-  position:fixed;
-  bottom:auto;
-  left:auto;
-  transform:none;
-  width:280px;
-  background:#1A2233;
-  color:#F2EFE6;
-  font-size:11px;
-  font-weight:400;
-  letter-spacing:0.01em;
-  text-transform:none;
-  line-height:1.6;
-  padding:10px 12px;
-  border-radius:6px;
-  border:1px solid rgba(255,255,255,0.1);
-  box-shadow:0 4px 16px rgba(0,0,0,0.3);
-  z-index:9999;
-  pointer-events:none;
-}
-.info-icon .tooltip::after{
-  content:'';
-  position:absolute;
-  top:100%;
-  left:20px;
-  border:5px solid transparent;
-  border-top-color:#1A2233;
-}
-.info-icon:hover .tooltip,
-.info-icon:focus .tooltip,
-.info-icon.active .tooltip{
-  display:block;
 }
 .metric-label{
-  font-size:11px;
-  letter-spacing:0.1em;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.06em;
   text-transform:uppercase;
-  color:var(--text-dimmer);
-  margin-bottom:4px;
-  font-weight:600;
+  color:rgba(0,0,0,0.6);
+  margin-bottom:5px;
+  line-height:1.2;
 }
 .metric-value{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:800;
-  font-size:26px;
+  font-size:30px;
   line-height:1;
-  color:var(--white);
-  transition:color 0.4s;
+  color:#000;
 }
-.metric-value.safe  { color:var(--safe-text); }
-.metric-value.caution{ color:var(--caution-text); }
-.metric-value.danger { color:var(--danger-text); }
-.metric-badge{
-  font-size:11px;
-  font-weight:600;
-  letter-spacing:0.04em;
-  text-transform:uppercase;
-  color:var(--text-dim);
-  margin-top:3px;
-  display:block;
-  line-height:1.3;
-}
-.metric-badge.safe  { color:var(--safe-text); }
-.metric-badge.caution{ color:var(--caution-text); }
-.metric-badge.danger { color:var(--danger-text); }
-
-/* WBGT Station row */
-.card-station{
-  padding:7px 12px;
-  border-bottom:1px solid var(--line);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:6px;
-}
-.station-info{
+.metric-unit{
   font-size:12px;
-  color:var(--text-dim);
-  line-height:1.3;
-}
-.station-name{
-  color:var(--white);
   font-weight:600;
+  color:rgba(0,0,0,0.65);
+  vertical-align:baseline;
 }
-.station-dist{
-  font-size:11px;
-  color:var(--text-dimmer);
-}
-
-/* Mini timeline */
-.card-timeline{
-  padding:8px 12px;
-  display:flex;
-  align-items:flex-end;
-  gap:3px;
-  height:44px;
-}
-.tl-bar{
-  flex:1;
-  border-radius:2px 2px 0 0;
-  min-height:4px;
-  background:var(--line);
-  transition:height 0.6s ease;
-}
-.tl-bar.tl-safe    { background:var(--safe);    opacity:0.3; }
-.tl-bar.tl-caution { background:var(--caution); opacity:0.3; }
-.tl-bar.tl-danger  { background:var(--danger);  opacity:0.3; }
-.tl-bar.tl-now.tl-safe    { background:var(--safe);    opacity:1; }
-.tl-bar.tl-now.tl-caution { background:var(--caution); opacity:1; }
-.tl-bar.tl-now.tl-danger  { background:var(--danger);  opacity:1; }
-/* Card footer */
-.card-foot{
-  padding:6px 12px 8px;
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-  font-size:11px;
-  color:var(--text-dimmer);
-  letter-spacing:0.03em;
-}
-.card-foot-label{
-  color:var(--text-dimmer);
-}
-.card-foot-station{
-  color:var(--text-dim);
-  font-weight:700;
-  font-size:12px;
-}
-
-/* Operational Status Card */
-.card-ops{
-  padding:8px 14px;
-  border-bottom:1px solid var(--line);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:3px;
-  background:#fff;
-  transition:background 0.4s ease;
-  text-align:center;
-  height:72px;          /* fixed height — same regardless of status */
-  overflow:hidden;
-}
-.card-ops.ops-normal  { background:#fff; }
-.card-ops.ops-caution { background:#FFF3CC; }
-.card-ops.ops-danger  { background:#FFD0D4; }
-.ops-status{
-  font-family:'Barlow Condensed',sans-serif;
-  font-weight:800;
-  /* clamp: shrinks from 26px down to 14px for longer text */
-  font-size:clamp(14px, 3.5vw, 26px);
-  line-height:1.15;
-  color:#333;
-  width:100%;
-}
-.ops-status.ops-danger-text { color:#333; }
-.ops-status.ops-caution-text{ color:#333; }
-.ops-status.ops-normal-text { color:#333; }
-.ops-until{
+.metric-sub{
   font-size:10px;
   font-weight:600;
-  color:#A30010;
-  letter-spacing:0.02em;
-  line-height:1.3;
-  width:100%;
+  color:rgba(0,0,0,0.6);
+  margin-top:3px;
+  line-height:1.35;
+  min-height:14px;
 }
-/* Override inside coloured cards */
-.st-safe .card-ops,
-.st-caution .card-ops,
-.st-danger .card-ops{ border-color:rgba(0,0,0,0.08); }
-.st-danger .card-ops.ops-danger { background:#FFD0D4; }
-.st-caution .card-ops.ops-caution { background:#FFF3CC; }
-.st-safe .card-ops.ops-normal,
-.st-caution .card-ops.ops-normal,
-.st-danger .card-ops.ops-normal{ background:#fff; }
 </style>
 </head>
 <body>
@@ -708,9 +418,9 @@ html,body{
 
     // Status colours matching the card palette
     var STATUS_COLOURS = {
-      safe:    '#CAD73E',
-      caution: '#FFC432',
-      danger:  '#F50016',
+      safe:    '#7ED857',
+      caution: '#FFD740',
+      danger:  '#E84455',
       loading: '#C9CDD2'
     };
 
@@ -947,6 +657,22 @@ function classifyPSI(v){
   if(isNaN(v)) return null;
   return v>200?"danger":v>100?"caution":"safe";
 }
+function psiLabel(v){
+  if(isNaN(v)) return "—";
+  if(v<=50)  return "Good";
+  if(v<=100) return "Moderate";
+  if(v<=200) return "Unhealthy";
+  if(v<=300) return "Very Unhealthy";
+  return "Hazardous";
+}
+function classifyPM25(v){
+  if(isNaN(v)) return "—";
+  if(v<=55)  return "Band 1 (Normal)";
+  if(v<=150) return "Band 2 (Elevated)";
+  if(v<=250) return "Band 3 (High)";
+  if(v<=350) return "Band 4 (Very High)";
+  return "Band 5 (Hazardous)";
+}
 function worstOf(levels){
   if(levels.indexOf("danger")>-1) return"danger";
   if(levels.indexOf("caution")>-1) return"caution";
@@ -1033,14 +759,16 @@ function parsePSI(json){
   var data=(json&&json.data)||{};
   var regionMeta=data.regionMetadata||[];
   var items=data.items||[];
-  if(!items.length) return {regions:[],psi24h:{}};
+  if(!items.length) return {regions:[],psi24h:{},pm25_1h:{}};
   var latest=items[items.length-1];
-  var psi24h=((latest.readings||{}).psi_twenty_four_hourly)||{};
+  var readings=(latest.readings||{});
+  var psi24h=(readings.psi_twenty_four_hourly)||{};
+  var pm25_1h={}; // 1-hr PM2.5 fetched separately
   var regions=regionMeta.map(function(r){
     var loc=r.labelLocation||{};
     return {name:r.name,lat:Number(loc.latitude),lon:Number(loc.longitude)};
   }).filter(function(r){return !isNaN(r.lat)&&!isNaN(r.lon);});
-  return {regions:regions,psi24h:psi24h};
+  return {regions:regions,psi24h:psi24h,pm25_1h:pm25_1h};
 }
 function nearestPSI(parsed,lat,lon){
   var best=null,bd=Infinity;
@@ -1048,6 +776,21 @@ function nearestPSI(parsed,lat,lon){
   if(!best) return NaN;
   var key=Object.keys(parsed.psi24h).filter(function(k){return k.toLowerCase()===best.name.toLowerCase();})[0];
   return key?Number(parsed.psi24h[key]):NaN;
+}
+function parsePM25(json){
+  var data=(json&&json.data)||{};
+  var items=data.items||[];
+  if(!items.length) return {};
+  var latest=items[items.length-1];
+  return (latest.readings&&latest.readings.pm25_one_hourly)||{};
+}
+// Reuses PSI region metadata for proximity; pm25_1h keyed by region name
+function nearestPM25(psiParsed,pm25_1h,lat,lon){
+  var best=null,bd=Infinity;
+  psiParsed.regions.forEach(function(r){var d=haversine(lat,lon,r.lat,r.lon);if(d<bd){bd=d;best=r;}});
+  if(!best) return NaN;
+  var key=Object.keys(pm25_1h||{}).filter(function(k){return k.toLowerCase()===best.name.toLowerCase();})[0];
+  return key?Number(pm25_1h[key]):NaN;
 }
 
 // ---------- BUILD CARD SHELLS ----------
@@ -1060,140 +803,95 @@ function buildCards(){
       var card=document.createElement("div");
       card.className="centre-card st-loading";
       card.id="card-"+c.id;
+      var displayName=(c.name.indexOf('@')>-1||c.name.indexOf('Sport')>-1)?c.name:c.name+' Sport Centre';
       card.innerHTML=
         '<div class="card-head">'+
-          '<div class="centre-name">'+c.name+'</div>'+
-          '<div class="card-status-badge" id="csb-'+c.id+'">Loading</div>'+
+          '<div class="centre-name">'+displayName+'</div>'+
         '</div>'+
-        '<div class="card-ops ops-normal" id="ops-'+c.id+'">'+
-          '<div class="ops-status ops-normal-text" id="ops-status-'+c.id+'">Loading…</div>'+
-          '<div class="ops-until" id="ops-until-'+c.id+'" style="display:none"></div>'+
+        '<div class="card-ops" id="ops-'+c.id+'">'+
+          '<div class="ops-main" id="ops-main-'+c.id+'">Loading…</div>'+
+          '<div class="ops-sub" id="ops-sub-'+c.id+'" style="display:none"></div>'+
         '</div>'+
         '<div class="card-metrics">'+
-          '<div class="card-divider">'+
-            '<span class="card-divider-label">⚡ Lightning Alert (within 8 km)</span>'+
-            '<span class="info-icon" tabindex="0">i'+
-              '<span class="tooltip">'+
-                '<strong>Cloud-to-Ground (C2G)</strong> — electrical discharges between cloud and ground. The more dangerous type.<br><br>'+
-                '<strong>Cloud-to-Cloud (C2C)</strong> — discharges within or between clouds. Usually, but not always, a precursor to C2G.<br><br>'+
-                'Most lightning occurs within 5–8 km of a storm. Strikes from a storm &gt;10 km away can still affect this location. <em>Source: NEA / MSS LIS</em>'+
-              '</span>'+
-            '</span>'+
-          '</div>'+
-          '<div class="metric">'+
-            '<div class="metric-label">Cloud-to-Ground</div>'+
+          '<div class="metric-cell">'+
+            '<div class="metric-label">Lightning Alert</div>'+
             '<div class="metric-value" id="lgv-'+c.id+'">—</div>'+
-            '<span class="metric-badge" id="lgb-'+c.id+'">—</span>'+
+            '<div class="metric-sub" id="lgb-'+c.id+'"></div>'+
           '</div>'+
-          '<div class="metric">'+
-            '<div class="metric-label">Cloud-to-Cloud</div>'+
-            '<div class="metric-value" id="lcv-'+c.id+'">—</div>'+
-            '<span class="metric-badge" id="lcb-'+c.id+'">—</span>'+
-          '</div>'+
-          '<div class="metric">'+
+          '<div class="metric-cell">'+
             '<div class="metric-label">WBGT</div>'+
             '<div class="metric-value" id="wv-'+c.id+'">—</div>'+
-            '<span class="metric-badge" id="wb-'+c.id+'">—</span>'+
+            '<div class="metric-sub" id="wb-'+c.id+'"></div>'+
           '</div>'+
-          '<div class="metric">'+
-            '<div class="metric-label">PSI</div>'+
+          '<div class="metric-cell">'+
+            '<div class="metric-label">24-hr PSI</div>'+
             '<div class="metric-value" id="pv-'+c.id+'">—</div>'+
-            '<span class="metric-badge" id="pb-'+c.id+'">—</span>'+
+            '<div class="metric-sub" id="pb-'+c.id+'"></div>'+
           '</div>'+
-        '</div>'+
-        '<div class="card-timeline" id="tl-'+c.id+'">'+
-        '</div>'+
-        '<div class="card-foot">'+
-          '<span class="card-foot-label">Last 3 hours · WBGT</span>'+
-          '<span class="card-foot-station" id="cf-'+c.id+'">—</span>'+
+          '<div class="metric-cell">'+
+            '<div class="metric-label">1-hr PM<sub>2.5</sub> (&micro;g/m&sup3;)</div>'+
+            '<div class="metric-value" id="pmv-'+c.id+'">—</div>'+
+            '<div class="metric-sub" id="pmb-'+c.id+'"></div>'+
+          '</div>'+
         '</div>';
       grid.appendChild(card);
     });
   });
 }
 
-// ---------- RENDER TIMELINE ----------
-function renderTimeline(centreId, historyPoints, currentLevel){
-  var tl=document.getElementById("tl-"+centreId);
-  if(!tl) return;
-  var now=new Date(), ago3=new Date(now-3*60*60*1000);
-  var recent=historyPoints.filter(function(p){return p.time>=ago3;});
-  if(!recent.length) recent=historyPoints.slice(-12);
-  tl.innerHTML='';
-  if(!recent.length){ var empty=document.createElement("div"); empty.className="tl-bar"; tl.appendChild(empty); return; }
-  var vals=recent.map(function(p){return p.value;});
-  var minV=Math.min.apply(null,vals), maxV=Math.max.apply(null,vals);
-  var range=Math.max(0.5,maxV-minV);
-  recent.forEach(function(p,i){
-    var lvl=classifyWBGT(p.value,p.flag)||currentLevel||"safe";
-    var isLast=i===recent.length-1;
-    var bar=document.createElement("div");
-    bar.className="tl-bar tl-"+lvl+(isLast?" tl-now":"");
-    bar.style.height=Math.max(8,25+((p.value-minV)/range)*65)+"%";
-    bar.title=p.time.toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit"})+" · "+p.value.toFixed(1)+"°C";
-    tl.appendChild(bar);
-  });
-}
-
 // ---------- RENDER CARD ----------
-function renderCard(centre, wbgt, lightning, psiVal, history){
+function renderCard(centre, wbgt, lightning, psiVal, pm25Val){
   var card=document.getElementById("card-"+centre.id);
   if(!card) return;
 
   var wLevel=classifyWBGT(wbgt.value,wbgt.flag);
-  // C2G (cloud-to-ground) = danger; C2C alone = caution; neither = safe
-  var lLevel=lightning.g.length>0?"danger":lightning.c.length>0?"caution":"safe";
+  var hasC2G=lightning.g.length>0;
+  var hasC2C=lightning.c.length>0;
+  var lLevel=hasC2G?"danger":hasC2C?"caution":"safe";
   var pLevel=classifyPSI(psiVal);
-  var overall=worstOf([wLevel,lLevel,pLevel].filter(Boolean));
+
+  // Red: C2G lightning or high WBGT; Yellow: C2C / moderate WBGT / any PSI issue; Green: all clear
+  var overall;
+  if(lLevel==="danger"||wLevel==="danger") overall="danger";
+  else if(lLevel==="caution"||wLevel==="caution"||pLevel==="caution"||pLevel==="danger") overall="caution";
+  else if(wLevel||lLevel||pLevel) overall="safe";
+  else overall=null;
 
   card.className="centre-card"+(overall?" st-"+overall:" st-loading");
 
-  var statusLabels={"safe":"Low","caution":"Moderate","danger":"High / Alert"};
-  var csb=document.getElementById("csb-"+centre.id);
-  if(csb) csb.textContent=overall?statusLabels[overall]:"No data";
+  // Lightning Alert (consolidated: show C2G count, else C2C count, else "Clear")
+  var lgv=document.getElementById("lgv-"+centre.id), lgb=document.getElementById("lgb-"+centre.id);
+  if(lgv){
+    if(hasC2G){
+      lgv.textContent=lightning.g.length;
+      if(lgb) lgb.textContent="Cloud-to-Ground within 8km";
+    } else if(hasC2C){
+      lgv.textContent=lightning.c.length;
+      if(lgb) lgb.textContent="Cloud-to-Cloud within 8km";
+    } else {
+      lgv.textContent="Clear";
+      if(lgb) lgb.textContent="";
+    }
+  }
 
   // WBGT
   var wv=document.getElementById("wv-"+centre.id), wb=document.getElementById("wb-"+centre.id);
-  if(wv){ wv.textContent=!isNaN(wbgt.value)?wbgt.value.toFixed(1)+"°":"—"; wv.className="metric-value"+(wLevel?" "+wLevel:""); }
-  var wLabels={"safe":"Low","caution":"Moderate","danger":"High"};
-  if(wb){ wb.textContent=wLevel?wLabels[wLevel]:"N/A"; wb.className="metric-badge"+(wLevel?" "+wLevel:""); }
+  if(wv) wv.textContent=!isNaN(wbgt.value)?wbgt.value.toFixed(1):"—";
+  if(wb) wb.textContent=wLevel?{safe:"Low",caution:"Moderate",danger:"High"}[wLevel]:"—";
 
   // PSI
   var pv=document.getElementById("pv-"+centre.id), pb=document.getElementById("pb-"+centre.id);
-  var pLabels={"safe":"Good/Mod","caution":"Unhealthy","danger":"V. Unhealthy"};
-  if(pv){ pv.textContent=!isNaN(psiVal)?psiVal:"—"; pv.className="metric-value"+(pLevel?" "+pLevel:""); }
-  if(pb){ pb.textContent=pLevel?pLabels[pLevel]:"N/A"; pb.className="metric-badge"+(pLevel?" "+pLevel:""); }
+  if(pv) pv.textContent=!isNaN(psiVal)?Math.round(psiVal):"—";
+  if(pb) pb.textContent=!isNaN(psiVal)?psiLabel(psiVal):"—";
 
-  // Cloud-to-Ground lightning (the dangerous kind)
-  var lgv=document.getElementById("lgv-"+centre.id), lgb=document.getElementById("lgb-"+centre.id);
-  var gAlert=lightning.g.length>0;
-  if(lgv){ lgv.textContent=gAlert?lightning.g.length:"✓"; lgv.className="metric-value"+(gAlert?" danger":" safe"); lgv.style.fontSize="22px"; lgv.style.lineHeight="1.3"; }
-  if(lgb){ lgb.textContent=gAlert?lightning.g.length+" within 8km":"Clear"; lgb.className="metric-badge"+(gAlert?" danger":" safe"); }
-
-  // Cloud-to-Cloud lightning
-  var lcv=document.getElementById("lcv-"+centre.id), lcb=document.getElementById("lcb-"+centre.id);
-  var cAlert=lightning.c.length>0;
-  if(lcv){ lcv.textContent=cAlert?lightning.c.length:"✓"; lcv.className="metric-value"+(cAlert?" caution":" safe"); lcv.style.fontSize="22px"; lcv.style.lineHeight="1.3"; }
-  if(lcb){ lcb.textContent=cAlert?lightning.c.length+" within 8km":"Clear"; lcb.className="metric-badge"+(cAlert?" caution":" safe"); }
-
-  // Station
-  var sn=document.getElementById("sn-"+centre.id);
-  var sd=document.getElementById("sd-"+centre.id);
-  var su=document.getElementById("su-"+centre.id);
-  if(sn) sn.textContent=wbgt.station?wbgt.station.name:"—";
-  if(sd) sd.textContent=wbgt.distKm!=null?"· "+distLabel(wbgt.distKm):"";
-  if(su) su.textContent=wbgt.timestamp?timeAgo(wbgt.timestamp):"—";
-
-  // Timeline
-  renderTimeline(centre.id, history||[], overall);
-
-  // Footer
-  var cf=document.getElementById("cf-"+centre.id);
-  if(cf) cf.textContent=wbgt.station?wbgt.station.name+" · "+distLabel(wbgt.distKm):"No station data";
+  // PM2.5
+  var pmv=document.getElementById("pmv-"+centre.id), pmb=document.getElementById("pmb-"+centre.id);
+  if(pmv) pmv.textContent=!isNaN(pm25Val)?Math.round(pm25Val):"—";
+  if(pmb) pmb.textContent=!isNaN(pm25Val)?classifyPM25(pm25Val):"—";
 }
 
 // ---------- DATA STATE ----------
-var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{}} };
+var dataState = { wbgtStations:[], wbgtHistory:{}, strikes:[], psiParsed:{regions:[],psi24h:{},pm25_1h:{}}, pm25_1h:{} };
 
 // ---------- CROWD ----------
 // ---------- MAP PIN COLOURS ----------
@@ -1215,52 +913,45 @@ function formatTime(date){
   return date.toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Singapore"});
 }
 
-function renderOpsStatus(centre, lightning, wbgt){
-  var opsEl    = document.getElementById("ops-"+centre.id);
-  var statusEl = document.getElementById("ops-status-"+centre.id);
-  var untilEl  = document.getElementById("ops-until-"+centre.id);
-  if(!opsEl||!statusEl||!untilEl) return;
+function renderOpsStatus(centre, lightning, wbgt, psiVal){
+  var mainEl=document.getElementById("ops-main-"+centre.id);
+  var subEl =document.getElementById("ops-sub-"+centre.id);
+  if(!mainEl||!subEl) return;
 
-  var hasC2G = lightning.g.length > 0;
-  var hasC2C = lightning.c.length > 0;
-  var wLevel = classifyWBGT(wbgt.value, wbgt.flag);
+  var hasC2G=lightning.g.length>0;
+  var hasC2C=lightning.c.length>0;
+  var wLevel=classifyWBGT(wbgt.value,wbgt.flag);
 
   if(hasC2G){
-    // Find most recent C2G strike time and add 30 min
-    var lastC2G = latestC2GTime(dataState.strikes, centre.lat, centre.lon);
-    var allClearTime = lastC2G ? new Date(lastC2G.getTime() + 30*60*1000) : null;
-    opsEl.className    = "card-ops ops-danger";
-    statusEl.className = "ops-status ops-danger-text";
-    statusEl.textContent = "⚡ All Outdoor Activities Ceased — Lightning Risk Alert";
-    untilEl.style.display = "block";
-    untilEl.textContent = allClearTime
-      ? "Resume outdoor activities after " + formatTime(allClearTime) + " SGT (if no further C2G)"
-      : "Resume after 30 min of no further C2G strikes within 8 km";
-
-  } else if(hasC2C){
-    opsEl.className    = "card-ops ops-caution";
-    statusEl.className = "ops-status ops-caution-text";
-    statusEl.textContent = "☁ Lightning Standby — Cloud-to-Cloud Activity within 8 km";
-    untilEl.style.display = "block";
-    untilEl.textContent = "Monitor closely — C2C may precede cloud-to-ground strikes";
-
+    var lastC2G=latestC2GTime(dataState.strikes,centre.lat,centre.lon);
+    var allClearTime=lastC2G?new Date(lastC2G.getTime()+30*60*1000):null;
+    mainEl.textContent=allClearTime
+      ?"Lightning Alert until "+formatTime(allClearTime)
+      :"Lightning Alert";
+    subEl.style.display="none";
   } else if(wLevel==="danger"){
-    opsEl.className    = "card-ops ops-danger";
-    statusEl.className = "ops-status ops-danger-text";
-    statusEl.textContent = "🌡 High Heat Stress Risk — Minimise Outdoor Activities";
-    untilEl.style.display = "none";
-
+    mainEl.textContent="High Heat Stress";
+    subEl.textContent="Minimise Outdoor Activity";
+    subEl.style.display="block";
+  } else if(hasC2C){
+    mainEl.textContent="Lightning Activity";
+    subEl.textContent="detected within range";
+    subEl.style.display="block";
+  } else if(!isNaN(psiVal)&&psiVal>200){
+    mainEl.textContent="Air Quality Very Unhealthy";
+    subEl.textContent="All Outdoor Facilities to be closed";
+    subEl.style.display="block";
   } else if(wLevel==="caution"){
-    opsEl.className    = "card-ops ops-caution";
-    statusEl.className = "ops-status ops-caution-text";
-    statusEl.textContent = "🌡 Moderate Heat Stress Risk — Reduce Activity Intensity";
-    untilEl.style.display = "none";
-
+    mainEl.textContent="Moderate Heat Stress";
+    subEl.textContent="Reduce Activity Intensity";
+    subEl.style.display="block";
+  } else if(!isNaN(psiVal)&&psiVal>100){
+    mainEl.textContent="Air Quality Unhealthy";
+    subEl.textContent="Limit Prolonged Outdoor Activity";
+    subEl.style.display="block";
   } else {
-    opsEl.className    = "card-ops ops-normal";
-    statusEl.className = "ops-status ops-normal-text";
-    statusEl.textContent = "Normal Operations";
-    untilEl.style.display = "none";
+    mainEl.textContent="Normal Operations";
+    subEl.style.display="none";
   }
 }
 
@@ -1273,9 +964,9 @@ function updateAllCards(){
     var wbgtResult = wRes ? {value:wRes.station.value, flag:wRes.station.flag, station:wRes.station, distKm:wRes.distKm, timestamp:wRes.station.timestamp} : {value:NaN};
     var lNearby=nearbyLightning(dataState.strikes,c.lat,c.lon);
     var psiVal=nearestPSI(dataState.psiParsed,c.lat,c.lon);
-    var hist=wRes?(dataState.wbgtHistory[wRes.station.id]||[]):[];
-    renderCard(c, wbgtResult, lNearby, psiVal, hist);
-    renderOpsStatus(c, lNearby, wbgtResult);
+    var pm25Val=nearestPM25(dataState.psiParsed,dataState.pm25_1h,c.lat,c.lon);
+    renderCard(c, wbgtResult, lNearby, psiVal, pm25Val);
+    renderOpsStatus(c, lNearby, wbgtResult, psiVal);
   });
   updateMapPins();
 }
@@ -1290,11 +981,13 @@ function refresh(){
     fetchProxy("wbgt"),
     fetchProxy("wbgt", today),
     fetchProxy("lightning"),
-    fetchProxy("psi")
+    fetchProxy("psi"),
+    fetchProxy("pm25")
   ]).then(function(res){
     dataState.wbgtStations = parseWBGTLatest(res[0]);
     dataState.strikes      = parseLightning(res[2]);
     dataState.psiParsed    = parsePSI(res[3]);
+    dataState.pm25_1h      = parsePM25(res[4]);
 
     // Build history lookup keyed by station ID
     var recs=(res[1]&&res[1].data&&res[1].data.records)||[];
@@ -1340,56 +1033,6 @@ refresh();
 setInterval(refresh, REFRESH_MS);
 setInterval(refreshLightning, LIGHTNING_REFRESH_MS);
 
-// Mobile tap + desktop click support for info icon tooltips.
-// Tooltip uses position:fixed to escape card overflow:hidden clipping.
-// JS positions it relative to the icon's screen coordinates.
-function positionTooltip(icon){
-  var tooltip = icon.querySelector(".tooltip");
-  if(!tooltip) return;
-  var rect = icon.getBoundingClientRect();
-  var tooltipW = 280;
-  var gap = 8;
-  // Position above the icon
-  var top = rect.top - gap;
-  var left = rect.left + (rect.width / 2) - (tooltipW / 2);
-  // Keep within viewport horizontally
-  var vw = window.innerWidth;
-  if(left < 8) left = 8;
-  if(left + tooltipW > vw - 8) left = vw - tooltipW - 8;
-  // If not enough room above, position below instead
-  if(top - 120 < 0){
-    tooltip.style.top = (rect.bottom + gap) + "px";
-    tooltip.style.bottom = "auto";
-    // flip the arrow
-    tooltip.style.setProperty("--arrow-top", "-10px");
-  } else {
-    tooltip.style.top = "auto";
-    tooltip.style.bottom = (window.innerHeight - rect.top + gap) + "px";
-  }
-  tooltip.style.left = left + "px";
-  tooltip.style.width = tooltipW + "px";
-}
-
-document.addEventListener("click", function(e){
-  var icon = e.target.closest(".info-icon");
-  if(icon){
-    e.stopPropagation();
-    var isActive = icon.classList.contains("active");
-    document.querySelectorAll(".info-icon.active").forEach(function(el){ el.classList.remove("active"); });
-    if(!isActive){
-      icon.classList.add("active");
-      positionTooltip(icon);
-    }
-    return;
-  }
-  document.querySelectorAll(".info-icon.active").forEach(function(el){ el.classList.remove("active"); });
-});
-
-// Desktop: reposition on hover in case of scroll
-document.addEventListener("mouseover", function(e){
-  var icon = e.target.closest(".info-icon");
-  if(icon) positionTooltip(icon);
-});
 
 })();
 </script>
